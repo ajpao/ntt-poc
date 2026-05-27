@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>POC Simulator | Hypervisor & Backup Software</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root{
   --bg:#060a14;--panel:#0c1424;--panel2:#101a2e;--border:#1d2f50;
@@ -63,6 +64,9 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
 .hint-txt.ok{color:var(--ok)}
 .credit-box{width:100%;max-width:920px;padding-top:18px;border-top:1px solid var(--border);text-align:center;font-family:'Share Tech Mono',monospace}
 .credit-name{font-size:.78rem;font-weight:700}.credit-sub{font-size:.64rem;color:var(--dim);line-height:1.9}
+.qr-wrap{margin:14px auto 0;display:inline-flex;flex-direction:column;align-items:center;gap:6px}
+.qr-wrap canvas,.qr-wrap img{border-radius:8px;border:1px solid rgba(0,229,160,.25);box-shadow:0 0 18px rgba(0,229,160,.15)}
+.qr-label{font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--dim);letter-spacing:3px}
 .sim-page{display:none;flex-direction:column}
 .topbar{height:58px;background:#0a1020;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;padding:0 22px;position:sticky;top:0;z-index:30}
 .topbar-icon{font-size:1.35rem}.topbar-title{font-family:'Share Tech Mono',monospace;color:var(--accent);font-size:1rem;letter-spacing:2px;flex:1}.topbar-sub{font-family:'Share Tech Mono',monospace;font-size:.68rem;color:var(--dim)}
@@ -291,6 +295,10 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
   <div class="credit-box">
     <div class="credit-name">POC Architecture Simulator</div>
     <div class="credit-sub">© 2026 Built by Jaruwath Kasetsin. All rights reserved.</div>
+    <div class="qr-wrap">
+      <div id="qrcode"></div>
+      <div class="qr-label">SCAN TO OPEN</div>
+    </div>
   </div>
 </div>
 
@@ -2460,5 +2468,11 @@ window.onload=()=>{
   const session=loadSession();
   if(session&&session.part&&cases[session.part])selectMode(session.part);
   else selectMode('hyper');
+  new QRCode(document.getElementById('qrcode'),{
+    text:'https://ajpao.github.io/ntt-poc/poc.html',
+    width:80,height:80,
+    colorDark:'#00e5a0',colorLight:'#060a14',
+    correctLevel:QRCode.CorrectLevel.M
+  });
 };
 </script></body></html>
