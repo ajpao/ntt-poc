@@ -216,6 +216,14 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
 .set-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(255,107,0,.12)}
 .set-input.ip-f{flex:.9;color:var(--info)}
 .set-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.step{flex-wrap:wrap}
+.note-btn{font-family:'Share Tech Mono',monospace;font-size:.56rem;letter-spacing:.5px;border:1px solid rgba(29,47,80,.9);border-radius:4px;background:rgba(6,10,20,.45);color:var(--dim);padding:4px 7px;cursor:pointer;transition:.18s;line-height:1.25;margin-left:auto;flex-shrink:0;align-self:center}
+.note-btn:hover{border-color:rgba(255,204,0,.65);color:var(--warn)}
+.note-btn.has-note{border-color:rgba(255,204,0,.55);color:var(--warn);background:rgba(255,204,0,.1)}
+.note-area{flex:0 0 100%;padding:6px 0 2px 32px}
+.note-input{width:100%;background:rgba(12,18,36,.7);border:1px solid rgba(255,204,0,.3);border-radius:5px;color:var(--text);font-family:'Noto Sans Thai','Share Tech Mono',sans-serif;font-size:.78rem;padding:7px 10px;resize:vertical;min-height:54px;outline:none;line-height:1.7;display:block}
+.note-input:focus{border-color:rgba(255,204,0,.65);box-shadow:0 0 0 2px rgba(255,204,0,.1)}
+.note-input::placeholder{color:var(--dim);font-size:.7rem}
 </style>
 </head>
 <body>
@@ -795,6 +803,40 @@ const STEP_STATUSES=[
   {key:'issue',label:'ISSUE'}
 ];
 let stepStatusStore={};
+const STEP_NOTES_KEY='poc_step_notes_v1';
+let stepNotesStore={};
+const openNoteKeys=new Set();
+function loadStepNotes(){
+  try{stepNotesStore=JSON.parse(localStorage.getItem(STEP_NOTES_KEY)||'{}')||{};}
+  catch(e){stepNotesStore={};}
+}
+function saveStepNotes(){
+  try{localStorage.setItem(STEP_NOTES_KEY,JSON.stringify(stepNotesStore));}catch(e){}
+}
+function getNote(index){
+  const key=caseKey();
+  const notes=stepNotesStore[key];
+  return Array.isArray(notes)?(notes[index]||''):'';
+}
+function setNote(index,text){
+  if(!currentCase)return;
+  const key=caseKey();
+  const count=currentCase.steps.length;
+  if(!Array.isArray(stepNotesStore[key]))stepNotesStore[key]=Array.from({length:count},()=>'');
+  while(stepNotesStore[key].length<count)stepNotesStore[key].push('');
+  stepNotesStore[key][index]=text;
+  saveStepNotes();
+  const btn=document.querySelectorAll('.note-btn')[index];
+  if(btn)btn.classList.toggle('has-note',text.trim().length>0);
+}
+function toggleNote(index){
+  const noteArea=document.getElementById('note-area-'+index);
+  if(!noteArea)return;
+  const key=caseKey()+':'+index;
+  const isOpen=noteArea.style.display!=='none';
+  if(isOpen){openNoteKeys.delete(key);noteArea.style.display='none';}
+  else{openNoteKeys.add(key);noteArea.style.display='block';noteArea.querySelector('textarea')?.focus();}
+}
 function nowTs(){return new Date().toLocaleTimeString('th-TH',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});}
 function loadStepStatuses(){
   try{stepStatusStore=JSON.parse(localStorage.getItem(STEP_STATUS_KEY)||'{}')||{};}
@@ -862,8 +904,13 @@ function renderSteps(){
   const statuses=getCaseStepStatuses();
   document.getElementById('caseSteps').innerHTML=currentCase.steps.map((s,i)=>{
     const st=statuses[i]||'pending';
+    const note=getNote(i);
+    const hasNote=note.trim().length>0;
+    const noteOpen=openNoteKeys.has(caseKey()+':'+i);
     const buttons=STEP_STATUSES.map(x=>`<button type="button" data-status="${x.key}" class="${st===x.key?'active':''}" onclick="setStepStatus(${i},'${x.key}')">${x.label}</button>`).join('');
-    return `<div class="step ${st==='pending'?'':st}"><div class="step-main"><span class="num">${String(i+1).padStart(2,'0')}</span><span class="step-text">${s}</span></div><div class="step-status" aria-label="Step ${i+1} status">${buttons}</div></div>`;
+    const noteBtn=`<button type="button" class="note-btn${hasNote?' has-note':''}" onclick="toggleNote(${i})" title="Note / Remark">&#9998; NOTE</button>`;
+    const noteArea=`<div class="note-area" id="note-area-${i}" style="display:${noteOpen?'block':'none'}"><textarea class="note-input" placeholder="บันทึก issue / remark สำหรับ step นี้..." oninput="setNote(${i},this.value)">${esc(note)}</textarea></div>`;
+    return `<div class="step ${st==='pending'?'':st}"><div class="step-main"><span class="num">${String(i+1).padStart(2,'0')}</span><span class="step-text">${s}</span>${noteBtn}</div><div class="step-status" aria-label="Step ${i+1} status">${buttons}</div>${noteArea}</div>`;
   }).join('');
 }
 function animNode(title,subtitle='',vms=[]){
@@ -2093,9 +2140,13 @@ function buildReportHtml(testerName=getTesterName()){
   const generatedAt=new Date().toLocaleString('th-TH',{hour12:false});
   const partName=currentPart==='hyper'?'Hypervisor':'Backup Software';
   const tester=testerName||'-';
+  const stepNotesList=currentCase.steps.map((_,i)=>getNote(i));
+  const hasAnyNote=stepNotesList.some(n=>n.trim().length>0);
+  const noteHeader=hasAnyNote?'<th>NOTES / REMARKS</th>':'';
   const stepRows=currentCase.steps.map((step,i)=>{
     const st=statuses[i]||'pending';
-    return `<tr><td>${String(i+1).padStart(2,'0')}</td><td>${esc(step)}</td><td><span class="st ${st}">${statusText(st)}</span></td></tr>`;
+    const noteCell=hasAnyNote?`<td style="white-space:pre-wrap;font-size:.78rem">${esc(stepNotesList[i])}</td>`:'';
+    return `<tr><td>${String(i+1).padStart(2,'0')}</td><td>${esc(step)}</td><td><span class="st ${st}">${statusText(st)}</span></td>${noteCell}</tr>`;
   }).join('');
   return `
     <div class="report-byline"><span><b>TESTER</b>${esc(tester)}</span></div>
@@ -2118,7 +2169,7 @@ function buildReportHtml(testerName=getTesterName()){
     <div>
       <div class="section-label">Test Procedures Status</div>
       <table class="report-table">
-        <thead><tr><th style="width:54px">NO.</th><th>PROCEDURE</th><th style="width:120px">STATUS</th></tr></thead>
+        <thead><tr><th style="width:54px">NO.</th><th>PROCEDURE</th><th style="width:120px">STATUS</th>${noteHeader}</tr></thead>
         <tbody>${stepRows}</tbody>
       </table>
     </div>
@@ -2329,5 +2380,5 @@ function saveSettingsForm(){
   applyDiagramSettings();
   closeSettingsModal();
 }
-window.onload=()=>{loadDiagramSettings();loadStepStatuses();applyDiagramSettings();selectMode('hyper');};
+window.onload=()=>{loadDiagramSettings();loadStepStatuses();loadStepNotes();applyDiagramSettings();selectMode('hyper');};
 </script></body></html>
