@@ -666,6 +666,10 @@ opacity:1
       </div>
       <div class="panel">
         <div class="panel-title">Procedure Animation</div>
+        <div class="progress-bar-wrap" style="margin-bottom:10px;padding:8px 12px">
+          <div class="progress-bar-label"><span class="pb-title" id="casePbTitle">— PROGRESS</span><span class="pb-stat" id="casePbStat">—</span></div>
+          <div class="progress-bar-track"><div class="progress-bar-fill" id="casePbFill"></div></div>
+        </div>
         <div class="animation-stage" id="animationStage"></div>
       </div>
     </div>
@@ -849,6 +853,26 @@ function saveSession(){
 function loadSession(){
   try{return JSON.parse(localStorage.getItem(SESSION_KEY)||'null');}catch(e){return null;}
 }
+function updateCaseProgressBar(){
+  if(!currentCase)return;
+  const statuses=getCaseStepStatuses();
+  const total=statuses.length;
+  const done=statuses.filter(s=>s==='done').length;
+  const issue=statuses.filter(s=>s==='issue').length;
+  const pct=total>0?Math.round(done/total*100):0;
+  const fill=document.getElementById('casePbFill');
+  const stat=document.getElementById('casePbStat');
+  const title=document.getElementById('casePbTitle');
+  if(title)title.textContent=currentCase.id+' PROGRESS';
+  if(fill){
+    fill.style.width=pct+'%';
+    fill.style.background=issue?'linear-gradient(90deg,#b87a00,var(--warn))':'linear-gradient(90deg,#00b87a,var(--ok))';
+  }
+  if(stat){
+    stat.textContent=`${done} / ${total} steps (${pct}%)${issue?' · '+issue+' issue':''}`;
+    stat.classList.toggle('has-issue',issue>0);
+  }
+}
 function updateProgressBar(){
   if(!currentPart)return;
   let total=0,done=0,issue=0;
@@ -958,6 +982,7 @@ function renderSteps(){
     const noteArea=`<div class="note-area" id="note-area-${i}" style="display:${noteOpen?'block':'none'}"><textarea class="note-input" placeholder="บันทึก issue / remark สำหรับ step นี้..." oninput="setNote(${i},this.value)">${esc(note)}</textarea></div>`;
     return `<div class="step ${st==='pending'?'':st}"><div class="step-main"><span class="num">${String(i+1).padStart(2,'0')}</span><div class="step-content"><span class="step-text">${s}</span>${noteBtn}</div></div><div class="step-status" aria-label="Step ${i+1} status">${buttons}</div>${noteArea}</div>`;
   }).join('');
+  updateCaseProgressBar();
 }
 function animNode(title,subtitle='',vms=[]){
   const vmHtml=vms.length?`<div class="anim-vms">${vms.map(x=>`<span class="anim-vm">${esc(x)}</span>`).join('')}</div>`:'';
