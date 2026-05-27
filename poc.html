@@ -231,7 +231,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
 .progress-bar-label .pb-stat{color:var(--ok);transition:color .3s}
 .progress-bar-label .pb-stat.has-issue{color:var(--warn)}
 .progress-bar-track{background:rgba(29,47,80,.6);border-radius:4px;height:8px;overflow:hidden}
-.progress-bar-fill{height:100%;width:0%;border-radius:4px;transition:width .4s ease,background .3s}
+.progress-bar-fill{height:100%;width:0%;border-radius:4px;transition:width .5s cubic-bezier(.4,0,.2,1),background .4s;filter:drop-shadow(0 0 4px rgba(0,229,160,.5))}
 </style>
 </head>
 <body>
@@ -866,7 +866,8 @@ function updateCaseProgressBar(){
   if(title)title.textContent=currentCase.id+' PROGRESS';
   if(fill){
     fill.style.width=pct+'%';
-    fill.style.background=issue?'linear-gradient(90deg,#b87a00,var(--warn))':'linear-gradient(90deg,#00b87a,var(--ok))';
+    fill.style.background=issue?'linear-gradient(90deg,#c2410c 0%,#ea580c 25%,#f97316 50%,#fbbf24 80%,#fde68a 100%)':'linear-gradient(90deg,#1a56db 0%,#3b82f6 25%,#06b6d4 55%,#00e5a0 80%,#6ee7b7 100%)';
+    fill.style.filter=issue?'drop-shadow(0 0 5px rgba(251,191,36,.55))':'drop-shadow(0 0 5px rgba(0,229,160,.55))';
   }
   if(stat){
     stat.textContent=`${done} / ${total} steps (${pct}%)${issue?' · '+issue+' issue':''}`;
@@ -886,7 +887,8 @@ function updateProgressBar(){
   const stat=document.getElementById('progressText');
   if(fill){
     fill.style.width=pct+'%';
-    fill.style.background=issue?'linear-gradient(90deg,#b87a00,var(--warn))':'linear-gradient(90deg,#00b87a,var(--ok))';
+    fill.style.background=issue?'linear-gradient(90deg,#c2410c 0%,#ea580c 25%,#f97316 50%,#fbbf24 80%,#fde68a 100%)':'linear-gradient(90deg,#1a56db 0%,#3b82f6 25%,#06b6d4 55%,#00e5a0 80%,#6ee7b7 100%)';
+    fill.style.filter=issue?'drop-shadow(0 0 5px rgba(251,191,36,.55))':'drop-shadow(0 0 5px rgba(0,229,160,.55))';
   }
   if(stat){
     stat.textContent=`${done} / ${total} steps  (${pct}%)${issue?' · '+issue+' issue':''}`;
