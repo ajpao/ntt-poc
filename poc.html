@@ -677,10 +677,11 @@ opacity:1
     </div>
     <div class="modal-body">
       <div class="confirm-copy">
-        การล้างนี้จะ reset สถานะของ Test Procedures ทั้งหมดกลับเป็น <b>PENDING</b> เพื่อเริ่มติดตามผลใหม่ตั้งแต่ต้น
+        การล้างนี้จะ reset สถานะและ Notes ของ Test Procedures ทั้งหมดกลับเป็นค่าเริ่มต้น เพื่อเริ่มติดตามผลใหม่ตั้งแต่ต้น
         <div class="confirm-list">
           <div class="confirm-item"><b>ล้าง</b><br>สถานะ Step ของ Hypervisor test cases ทั้งหมด HP-001 ถึง HP-015</div>
           <div class="confirm-item"><b>ล้าง</b><br>สถานะ Step ของ Backup Software test cases ทั้งหมด BU-001 ถึง BU-004</div>
+          <div class="confirm-item"><b>ล้าง</b><br>Notes / Remarks ทั้งหมดของทุก Step ทุก Test Case</div>
           <div class="confirm-item"><b>ไม่ล้าง</b><br>Diagram settings, IP/ชื่ออุปกรณ์, รายละเอียด Test Case และข้อมูลในไฟล์นี้</div>
         </div>
       </div>
@@ -881,12 +882,15 @@ function resetAllStepStatuses(){
 function confirmResetAllStepStatuses(){
   stepStatusStore={};
   saveStepStatuses();
+  stepNotesStore={};
+  saveStepNotes();
+  openNoteKeys.clear();
   closeResetAllModal();
   if(currentCase){
     renderSteps();
     updateCaseStatusFromSteps();
     renderAnimation();
-    document.getElementById('eventLog').innerHTML=`<div class="le"><span class="lt">${nowTs()}</span><span class="lwn">All test procedure statuses reset.</span></div>`;
+    document.getElementById('eventLog').innerHTML=`<div class="le"><span class="lt">${nowTs()}</span><span class="lwn">All test procedure statuses and notes reset.</span></div>`;
     document.getElementById('resultBox').className='result-box';
     document.getElementById('resultBox').innerHTML=`<b>${currentCase.id}: ${currentCase.name}</b><br><span style="color:var(--dim)">Expected Results:</span><br>${currentCase.expected.map(x=>`- ${x}`).join('<br>')}<br><div class="verdict" style="color:var(--warn)">&#9679; Waiting for simulation run</div>`;
   }
