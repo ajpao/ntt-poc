@@ -217,7 +217,8 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
 .set-input.ip-f{flex:.9;color:var(--info)}
 .set-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
 .step{flex-wrap:wrap}
-.note-btn{font-family:'Share Tech Mono',monospace;font-size:.56rem;letter-spacing:.5px;border:1px solid rgba(29,47,80,.9);border-radius:4px;background:rgba(6,10,20,.45);color:var(--dim);padding:4px 7px;cursor:pointer;transition:.18s;line-height:1.25;margin-left:auto;flex-shrink:0;align-self:center}
+.step-content{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+.note-btn{font-family:'Share Tech Mono',monospace;font-size:.56rem;letter-spacing:.5px;border:1px solid rgba(29,47,80,.9);border-radius:4px;background:rgba(6,10,20,.45);color:var(--dim);padding:4px 7px;cursor:pointer;transition:.18s;line-height:1.25;align-self:flex-start;flex-shrink:0}
 .note-btn:hover{border-color:rgba(255,204,0,.65);color:var(--warn)}
 .note-btn.has-note{border-color:rgba(255,204,0,.55);color:var(--warn);background:rgba(255,204,0,.1)}
 .note-area{flex:0 0 100%;padding:6px 0 2px 32px}
@@ -914,7 +915,7 @@ function renderSteps(){
     const buttons=STEP_STATUSES.map(x=>`<button type="button" data-status="${x.key}" class="${st===x.key?'active':''}" onclick="setStepStatus(${i},'${x.key}')">${x.label}</button>`).join('');
     const noteBtn=`<button type="button" class="note-btn${hasNote?' has-note':''}" onclick="toggleNote(${i})" title="Note / Remark">&#9998; NOTE</button>`;
     const noteArea=`<div class="note-area" id="note-area-${i}" style="display:${noteOpen?'block':'none'}"><textarea class="note-input" placeholder="บันทึก issue / remark สำหรับ step นี้..." oninput="setNote(${i},this.value)">${esc(note)}</textarea></div>`;
-    return `<div class="step ${st==='pending'?'':st}"><div class="step-main"><span class="num">${String(i+1).padStart(2,'0')}</span><span class="step-text">${s}</span>${noteBtn}</div><div class="step-status" aria-label="Step ${i+1} status">${buttons}</div>${noteArea}</div>`;
+    return `<div class="step ${st==='pending'?'':st}"><div class="step-main"><span class="num">${String(i+1).padStart(2,'0')}</span><div class="step-content"><span class="step-text">${s}</span>${noteBtn}</div></div><div class="step-status" aria-label="Step ${i+1} status">${buttons}</div>${noteArea}</div>`;
   }).join('');
 }
 function animNode(title,subtitle='',vms=[]){
