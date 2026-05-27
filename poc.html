@@ -65,7 +65,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
 .credit-box{width:100%;max-width:920px;padding-top:18px;border-top:1px solid var(--border);text-align:center;font-family:'Share Tech Mono',monospace}
 .credit-name{font-size:.78rem;font-weight:700}.credit-sub{font-size:.64rem;color:var(--dim);line-height:1.9}
 .qr-wrap{margin:14px auto 0;display:inline-flex;flex-direction:column;align-items:center;gap:6px}
-.qr-wrap canvas,.qr-wrap img{border-radius:8px;border:1px solid rgba(0,229,160,.25);box-shadow:0 0 18px rgba(0,229,160,.15)}
+.qr-wrap canvas,.qr-wrap img{border-radius:8px;border:1px solid rgba(255,255,255,.2);box-shadow:0 0 18px rgba(255,255,255,.12)}
 .qr-label{font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--dim);letter-spacing:3px}
 .sim-page{display:none;flex-direction:column}
 .topbar{height:58px;background:#0a1020;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;padding:0 22px;position:sticky;top:0;z-index:30}
@@ -2471,7 +2471,7 @@ window.onload=()=>{
   new QRCode(document.getElementById('qrcode'),{
     text:'https://ajpao.github.io/ntt-poc/poc.html',
     width:80,height:80,
-    colorDark:'#00e5a0',colorLight:'#060a14',
+    colorDark:'#ffffff',colorLight:'#060a14',
     correctLevel:QRCode.CorrectLevel.M
   });
 };
