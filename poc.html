@@ -225,6 +225,13 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
 .note-input{width:100%;background:rgba(12,18,36,.7);border:1px solid rgba(255,204,0,.3);border-radius:5px;color:var(--text);font-family:'Noto Sans Thai','Share Tech Mono',sans-serif;font-size:.78rem;padding:7px 10px;resize:vertical;min-height:54px;outline:none;line-height:1.7;display:block}
 .note-input:focus{border-color:rgba(255,204,0,.65);box-shadow:0 0 0 2px rgba(255,204,0,.1)}
 .note-input::placeholder{color:var(--dim);font-size:.7rem}
+.progress-bar-wrap{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:14px}
+.progress-bar-label{display:flex;justify-content:space-between;align-items:center;font-family:'Share Tech Mono',monospace;font-size:.7rem;margin-bottom:7px;letter-spacing:1px}
+.progress-bar-label .pb-title{color:var(--dim)}
+.progress-bar-label .pb-stat{color:var(--ok);transition:color .3s}
+.progress-bar-label .pb-stat.has-issue{color:var(--warn)}
+.progress-bar-track{background:rgba(29,47,80,.6);border-radius:4px;height:8px;overflow:hidden}
+.progress-bar-fill{height:100%;width:0%;border-radius:4px;transition:width .4s ease,background .3s}
 </style>
 </head>
 <body>
@@ -627,6 +634,10 @@ opacity:1
       </div>
     </div>
     <div class="btn-bar" id="caseButtons"></div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-label"><span class="pb-title">&#9632; OVERALL PROGRESS</span><span class="pb-stat" id="progressText">—</span></div>
+      <div class="progress-bar-track"><div class="progress-bar-fill" id="progressFill"></div></div>
+    </div>
     <div class="main-grid">
       <div class="panel">
         <div class="case-head">
@@ -831,6 +842,33 @@ function setNote(index,text){
   const btn=document.querySelectorAll('.note-btn')[index];
   if(btn)btn.classList.toggle('has-note',text.trim().length>0);
 }
+const SESSION_KEY='poc_session_v1';
+function saveSession(){
+  try{localStorage.setItem(SESSION_KEY,JSON.stringify({part:currentPart,caseId:currentCase?.id}));}catch(e){}
+}
+function loadSession(){
+  try{return JSON.parse(localStorage.getItem(SESSION_KEY)||'null');}catch(e){return null;}
+}
+function updateProgressBar(){
+  if(!currentPart)return;
+  let total=0,done=0,issue=0;
+  cases[currentPart].forEach(c=>{
+    const saved=stepStatusStore[`${currentPart}:${c.id}`]||[];
+    total+=c.steps.length;
+    saved.forEach(s=>{if(s==='done')done++;else if(s==='issue')issue++;});
+  });
+  const pct=total>0?Math.round(done/total*100):0;
+  const fill=document.getElementById('progressFill');
+  const stat=document.getElementById('progressText');
+  if(fill){
+    fill.style.width=pct+'%';
+    fill.style.background=issue?'linear-gradient(90deg,#b87a00,var(--warn))':'linear-gradient(90deg,#00b87a,var(--ok))';
+  }
+  if(stat){
+    stat.textContent=`${done} / ${total} steps  (${pct}%)${issue?' · '+issue+' issue':''}`;
+    stat.classList.toggle('has-issue',issue>0);
+  }
+}
 function toggleNote(index){
   const noteArea=document.getElementById('note-area-'+index);
   if(!noteArea)return;
@@ -866,6 +904,7 @@ function setStepStatus(index,status){
   renderSteps();
   updateCaseStatusFromSteps();
   renderAnimation(index,status);
+  updateProgressBar();
 }
 function resetCurrentStepStatuses(){
   if(!currentCase)return;
@@ -873,6 +912,7 @@ function resetCurrentStepStatuses(){
   saveStepStatuses();
   renderSteps();
   renderAnimation();
+  updateProgressBar();
 }
 function openResetAllModal(){document.getElementById('resetAllModal').classList.add('open');}
 function closeResetAllModal(){document.getElementById('resetAllModal').classList.remove('open');}
@@ -891,6 +931,7 @@ function confirmResetAllStepStatuses(){
     renderSteps();
     updateCaseStatusFromSteps();
     renderAnimation();
+    updateProgressBar();
     document.getElementById('eventLog').innerHTML=`<div class="le"><span class="lt">${nowTs()}</span><span class="lwn">All test procedure statuses and notes reset.</span></div>`;
     document.getElementById('resultBox').className='result-box';
     document.getElementById('resultBox').innerHTML=`<b>${currentCase.id}: ${currentCase.name}</b><br><span style="color:var(--dim)">Expected Results:</span><br>${currentCase.expected.map(x=>`- ${x}`).join('<br>')}<br><div class="verdict" style="color:var(--warn)">&#9679; Waiting for simulation run</div>`;
@@ -2238,6 +2279,8 @@ function pickCase(id){
   renderAnimation();
   resetRun(false);
   updateCaseStatusFromSteps();
+  saveSession();
+  updateProgressBar();
 }
 function resetRun(resetSteps=false){
   running=false;
@@ -2385,5 +2428,15 @@ function saveSettingsForm(){
   applyDiagramSettings();
   closeSettingsModal();
 }
-window.onload=()=>{loadDiagramSettings();loadStepStatuses();loadStepNotes();applyDiagramSettings();selectMode('hyper');};
+window.onload=()=>{
+  loadDiagramSettings();loadStepStatuses();loadStepNotes();applyDiagramSettings();
+  const session=loadSession();
+  if(session&&session.part&&cases[session.part]){
+    selectMode(session.part);
+    startSelected();
+    if(session.caseId)pickCase(session.caseId);
+  }else{
+    selectMode('hyper');
+  }
+};
 </script></body></html>
