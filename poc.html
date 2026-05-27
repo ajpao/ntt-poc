@@ -2431,12 +2431,7 @@ function saveSettingsForm(){
 window.onload=()=>{
   loadDiagramSettings();loadStepStatuses();loadStepNotes();applyDiagramSettings();
   const session=loadSession();
-  if(session&&session.part&&cases[session.part]){
-    selectMode(session.part);
-    startSelected();
-    if(session.caseId)pickCase(session.caseId);
-  }else{
-    selectMode('hyper');
-  }
+  if(session&&session.part&&cases[session.part])selectMode(session.part);
+  else selectMode('hyper');
 };
 </script></body></html>
