@@ -866,7 +866,7 @@ function updateCaseProgressBar(){
   if(title)title.textContent=currentCase.id+' PROGRESS';
   if(fill){
     fill.style.width=pct+'%';
-    fill.style.background=issue?'linear-gradient(90deg,#ff3355 0%,#ff6b00 45%,#ffcc00 100%)':'linear-gradient(90deg,#004d35 0%,#00875a 35%,#00c47a 70%,#00e5a0 100%)';
+    fill.style.background=issue?'linear-gradient(90deg,#ff3355 0%,#ff6b00 45%,#ffcc00 100%)':'linear-gradient(90deg,#00c47a 0%,#00e5a0 50%,#80ffd0 100%)';
     fill.style.filter=issue?'drop-shadow(0 0 6px rgba(255,107,0,.7))':'drop-shadow(0 0 6px rgba(0,229,160,.6))';
   }
   if(stat){
@@ -887,7 +887,7 @@ function updateProgressBar(){
   const stat=document.getElementById('progressText');
   if(fill){
     fill.style.width=pct+'%';
-    fill.style.background=issue?'linear-gradient(90deg,#ff3355 0%,#ff6b00 45%,#ffcc00 100%)':'linear-gradient(90deg,#004d35 0%,#00875a 35%,#00c47a 70%,#00e5a0 100%)';
+    fill.style.background=issue?'linear-gradient(90deg,#ff3355 0%,#ff6b00 45%,#ffcc00 100%)':'linear-gradient(90deg,#00c47a 0%,#00e5a0 50%,#80ffd0 100%)';
     fill.style.filter=issue?'drop-shadow(0 0 6px rgba(255,107,0,.7))':'drop-shadow(0 0 6px rgba(0,229,160,.6))';
   }
   if(stat){
