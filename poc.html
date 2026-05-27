@@ -1,0 +1,2333 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POC Simulator | Hypervisor & Backup Software</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#060a14;--panel:#0c1424;--panel2:#101a2e;--border:#1d2f50;
+  --accent:#ff6b00;--ok:#00e5a0;--info:#3399ff;--warn:#ffcc00;
+  --danger:#ff3355;--text:#e0eaff;--dim:#7b8cae;--purple:#a855f7;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:18px}
+body{font-family:'Noto Sans Thai','Share Tech Mono',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(29,47,80,.32) 1px,transparent 1px),linear-gradient(90deg,rgba(29,47,80,.32) 1px,transparent 1px);background-size:48px 48px;animation:gridScroll 28s linear infinite}
+body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 70% 55% at 50% 28%,rgba(255,107,0,.08),transparent 64%),radial-gradient(ellipse 50% 50% at 18% 80%,rgba(0,229,160,.06),transparent 68%),radial-gradient(ellipse 48% 44% at 84% 74%,rgba(51,153,255,.08),transparent 70%)}
+@keyframes gridScroll{to{background-position:48px 48px}}
+.corner{position:fixed;width:52px;height:52px;z-index:1;opacity:.25;pointer-events:none}
+.tl{top:14px;left:14px;border-top:2px solid var(--accent);border-left:2px solid var(--accent)}
+.tr{top:14px;right:14px;border-top:2px solid var(--accent);border-right:2px solid var(--accent)}
+.bl{bottom:14px;left:14px;border-bottom:2px solid var(--accent);border-left:2px solid var(--accent)}
+.br{bottom:14px;right:14px;border-bottom:2px solid var(--accent);border-right:2px solid var(--accent)}
+.page{position:relative;z-index:2;min-height:100vh}
+#pg-landing{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 20px}
+.logo-row{display:flex;align-items:center;gap:20px;margin-bottom:12px}
+.logo-icon{width:118px;height:118px;border:1px solid rgba(255,107,0,.38);border-radius:18px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(255,107,0,.14),rgba(0,229,160,.07) 48%,rgba(51,153,255,.12));box-shadow:0 0 28px rgba(255,107,0,.2),inset 0 0 22px rgba(255,255,255,.03);position:relative;overflow:hidden}
+.logo-icon::before{content:'';position:absolute;inset:-45%;background:conic-gradient(from 90deg,transparent,rgba(0,229,160,.18),transparent,rgba(51,153,255,.2),transparent);animation:spin 5s linear infinite}
+.logo-icon::after{content:'';position:absolute;inset:6px;border-radius:14px;border:1px solid rgba(224,234,255,.08);background:rgba(6,10,20,.52)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.logo-svg{position:relative;z-index:1;width:88px;height:88px;overflow:visible}
+.logo-svg .flow{fill:none;stroke-linecap:round;stroke-dasharray:8 5;animation:flow 1.5s linear infinite;filter:drop-shadow(0 0 5px currentColor)}
+.logo-svg .node{fill:#0b1528;stroke:rgba(224,234,255,.7);stroke-width:1.3}
+.logo-svg .pulse{fill:none;stroke:var(--accent);stroke-width:1.2;opacity:.72;transform-origin:center;animation:pulse 2.2s ease-out infinite}
+@keyframes flow{to{stroke-dashoffset:-52}}
+@keyframes pulse{from{transform:scale(.7);opacity:.8}to{transform:scale(1.35);opacity:0}}
+.logo-title{font-family:'Share Tech Mono',monospace;font-size:3.15rem;color:var(--accent);letter-spacing:3px;line-height:1}
+.subtitle{font-family:'Share Tech Mono',monospace;color:var(--dim);font-size:.8rem;letter-spacing:2px;text-align:center;margin-bottom:6px}
+.ver-pill{font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--accent);border:1px solid rgba(255,107,0,.28);background:rgba(255,107,0,.06);padding:3px 13px;border-radius:20px;letter-spacing:1px;margin-bottom:30px}
+.sel-lbl{font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--dim);letter-spacing:3px;text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:14px}
+.sel-lbl::before,.sel-lbl::after{content:'';width:60px;height:1px;background:var(--border)}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:22px;width:100%;max-width:920px;margin-bottom:24px}
+.mode-card{background:var(--panel);border:2px solid var(--border);border-radius:12px;padding:26px;cursor:pointer;transition:.25s;position:relative;overflow:hidden;text-align:left;min-height:268px}
+.mode-card::before{content:'';position:absolute;inset:0;border-left:4px solid transparent;opacity:.9}
+.mode-card:hover{transform:translateY(-3px)}
+.mode-card.hyper::before{border-left-color:var(--ok)}.mode-card.backup::before{border-left-color:var(--info)}
+.mode-card.hyper:hover,.mode-card.hyper.sel{border-color:var(--ok);box-shadow:0 0 32px rgba(0,229,160,.16)}
+.mode-card.backup:hover,.mode-card.backup.sel{border-color:var(--info);box-shadow:0 0 32px rgba(51,153,255,.18)}
+.mc-check{position:absolute;top:13px;right:14px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.85rem;opacity:0;transform:scale(.4);transition:.25s}
+.hyper .mc-check{background:var(--ok);color:#00120d}.backup .mc-check{background:var(--info);color:#fff}.mode-card.sel .mc-check{opacity:1;transform:scale(1)}
+.mc-icon{height:92px;margin:-6px 0 12px}
+.mc-tag{font-family:'Share Tech Mono',monospace;font-size:.58rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;padding:2px 8px;border-radius:4px;display:inline-block}
+.hyper .mc-tag{color:var(--ok);background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.25)}
+.backup .mc-tag{color:var(--info);background:rgba(51,153,255,.1);border:1px solid rgba(51,153,255,.25)}
+.mc-name{font-size:1.18rem;font-weight:700;margin-bottom:8px}
+.mc-desc{font-size:.82rem;color:var(--dim);line-height:1.75;margin-bottom:12px}
+.mc-sc{font-family:'Share Tech Mono',monospace;font-size:.66rem;line-height:1.95;border-top:1px solid var(--border);padding-top:9px;color:rgba(224,234,255,.72)}
+.start-btn{width:100%;max-width:920px;padding:15px;font-family:'Share Tech Mono',monospace;font-size:.95rem;letter-spacing:3px;font-weight:700;border-radius:8px;border:2px solid var(--dim);background:transparent;color:var(--dim);cursor:not-allowed;transition:.25s;text-transform:uppercase;margin-bottom:10px}
+.start-btn.ready{cursor:pointer;border-color:var(--accent);color:#fff;background:rgba(255,107,0,.13);box-shadow:0 0 24px rgba(255,107,0,.22)}
+.start-btn.ready:hover{background:rgba(255,107,0,.25);transform:translateY(-1px)}
+.hint-txt{font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--dim);text-align:center;letter-spacing:1px;min-height:16px;margin-bottom:22px}
+.hint-txt.ok{color:var(--ok)}
+.credit-box{width:100%;max-width:920px;padding-top:18px;border-top:1px solid var(--border);text-align:center;font-family:'Share Tech Mono',monospace}
+.credit-name{font-size:.78rem;font-weight:700}.credit-sub{font-size:.64rem;color:var(--dim);line-height:1.9}
+.sim-page{display:none;flex-direction:column}
+.topbar{height:58px;background:#0a1020;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;padding:0 22px;position:sticky;top:0;z-index:30}
+.topbar-icon{font-size:1.35rem}.topbar-title{font-family:'Share Tech Mono',monospace;color:var(--accent);font-size:1rem;letter-spacing:2px;flex:1}.topbar-sub{font-family:'Share Tech Mono',monospace;font-size:.68rem;color:var(--dim)}
+.back-link{font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--dim);border:1px solid var(--border);padding:6px 14px;border-radius:5px;cursor:pointer;background:transparent;transition:.2s;white-space:nowrap}
+.back-link:hover{border-color:var(--accent);color:var(--accent)}
+.sim-body{width:100%;max-width:1340px;margin:0 auto;padding:16px}
+.overview{display:block;margin-bottom:14px}
+.diagram-wrap,.panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px}
+.diagram-wrap{position:relative}
+.diagram-wrap svg{width:100%;display:block;min-height:320px}
+.info-float{position:fixed;top:76px;right:20px;width:42px;height:42px;border-radius:50%;border:1px solid rgba(51,153,255,.55);background:rgba(12,20,36,.9);color:#fff;font-family:'Share Tech Mono',monospace;font-size:1.05rem;font-weight:700;cursor:pointer;display:grid;place-items:center;box-shadow:0 0 22px rgba(51,153,255,.24);transition:.2s;z-index:80}
+.info-float:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 0 26px rgba(255,107,0,.24);transform:translateY(-1px)}
+.panel-title{font-family:'Share Tech Mono',monospace;color:var(--accent);font-size:.82rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border)}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.metric{background:var(--panel2);border:1px solid rgba(29,47,80,.8);border-radius:7px;padding:10px;min-height:76px}
+.metric strong{display:block;font-family:'Share Tech Mono',monospace;font-size:1.25rem;color:var(--text);line-height:1.2}.metric span{font-size:.74rem;color:var(--dim);line-height:1.65}
+.vlan-list{margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.vlan{font-family:'Share Tech Mono',monospace;font-size:.64rem;border:1px solid rgba(29,47,80,.85);border-radius:5px;padding:6px 8px;color:var(--dim)}
+.vlan b{color:var(--text)}
+.btn-bar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:0 auto 16px;width:100%;align-items:stretch}
+.btn-s{background:linear-gradient(180deg,rgba(16,26,46,.92),rgba(12,20,36,.92));border:1px solid rgba(29,47,80,.92);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.68rem;padding:10px 11px;border-radius:7px;cursor:pointer;transition:.2s;text-align:left;line-height:1.45;height:72px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:3px}
+.btn-s::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--dim);transition:.2s}
+.btn-s::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,107,0,.08),transparent 46%);opacity:0;transition:.2s;pointer-events:none}
+.btn-s:hover{border-color:rgba(255,107,0,.65);transform:translateY(-1px);box-shadow:0 10px 20px rgba(0,0,0,.18)}.btn-s:hover::before{background:var(--accent)}.btn-s:hover::after{opacity:1}
+.btn-s.active{border-color:var(--accent);background:linear-gradient(180deg,rgba(255,107,0,.16),rgba(16,26,46,.94));box-shadow:0 0 0 1px rgba(255,107,0,.18),0 0 22px rgba(255,107,0,.12)}.btn-s.active::before{background:var(--accent);width:4px}.btn-s.active::after{opacity:1}
+.btn-id{color:var(--accent);font-size:.7rem;letter-spacing:1.5px}
+.btn-name{color:rgba(224,234,255,.86);font-family:'Noto Sans Thai','Share Tech Mono',sans-serif;font-size:.72rem;font-weight:700;line-height:1.35}
+.main-grid{display:grid;grid-template-columns:.95fr 1.05fr;gap:14px;margin-bottom:14px;align-items:stretch}
+.main-grid>.panel{min-height:0}
+.main-grid>.panel:last-child{display:flex;flex-direction:column;min-height:0}
+.case-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.case-id{font-family:'Share Tech Mono',monospace;color:var(--ok);font-size:.9rem;letter-spacing:1px}
+.case-name{font-size:1.2rem;font-weight:700;line-height:1.4}
+.status-pill{font-family:'Share Tech Mono',monospace;font-size:.62rem;padding:4px 8px;border-radius:4px;border:1px solid rgba(255,204,0,.35);color:var(--warn);background:rgba(255,204,0,.08);white-space:nowrap}
+.status-pill.ready{border-color:rgba(255,204,0,.35);color:var(--warn);background:rgba(255,204,0,.08)}
+.status-pill.running,.status-pill.progress{border-color:rgba(51,153,255,.48);color:var(--info);background:rgba(51,153,255,.1)}
+.status-pill.done,.status-pill.pass{border-color:rgba(0,229,160,.48);color:var(--ok);background:rgba(0,229,160,.1)}
+.status-pill.issue{border-color:rgba(255,51,85,.5);color:var(--danger);background:rgba(255,51,85,.1)}
+.case-desc{font-size:.86rem;color:var(--text);line-height:1.8;margin-bottom:12px;background:rgba(16,26,46,.5);border:1px solid rgba(29,47,80,.72);border-radius:6px;padding:9px;white-space:pre-line}
+.section-label{font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;margin:12px 0 6px}
+.steps,.indicators{display:grid;gap:7px}
+.step,.indicator{display:flex;gap:8px;align-items:flex-start;font-size:.82rem;line-height:1.65;color:var(--text);background:rgba(16,26,46,.62);border:1px solid rgba(29,47,80,.72);border-radius:6px;padding:8px}
+.step{align-items:stretch;justify-content:space-between;gap:12px}
+.step.done{border-color:rgba(0,229,160,.42);background:rgba(0,229,160,.06)}
+.step.running{border-color:rgba(255,204,0,.45);background:rgba(255,204,0,.06)}
+.step.issue{border-color:rgba(255,51,85,.48);background:rgba(255,51,85,.06)}
+.step-main{display:flex;gap:8px;align-items:flex-start;min-width:0;flex:1}
+.step-text{white-space:pre-line}
+.step .num,.indicator .dot{font-family:'Share Tech Mono',monospace;color:var(--accent);min-width:24px}
+.step-status{display:grid;grid-template-columns:repeat(4,auto);gap:5px;align-content:start;justify-content:end;flex-shrink:0}
+.step-status button{font-family:'Share Tech Mono',monospace;font-size:.56rem;letter-spacing:.5px;border:1px solid rgba(29,47,80,.9);border-radius:4px;background:rgba(6,10,20,.45);color:var(--dim);padding:4px 6px;cursor:pointer;transition:.18s;line-height:1.25;min-width:50px}
+.step-status button:hover{border-color:var(--accent);color:var(--text)}
+.step-status button.active[data-status="pending"]{border-color:rgba(123,140,174,.62);color:var(--text);background:rgba(123,140,174,.12)}
+.step-status button.active[data-status="running"]{border-color:rgba(255,204,0,.75);color:var(--warn);background:rgba(255,204,0,.12)}
+.step-status button.active[data-status="done"]{border-color:rgba(0,229,160,.75);color:var(--ok);background:rgba(0,229,160,.12)}
+.step-status button.active[data-status="issue"]{border-color:rgba(255,51,85,.78);color:var(--danger);background:rgba(255,51,85,.12)}
+.indicator .dot{color:var(--ok);min-width:14px}
+.detail-list{display:grid;gap:7px}
+.detail-item{font-size:.82rem;line-height:1.65;color:var(--text);background:rgba(16,26,46,.5);border:1px solid rgba(29,47,80,.72);border-radius:6px;padding:8px;white-space:pre-line}
+.detail-item.bullet{display:flex;gap:8px}.detail-item.bullet::before{content:'-';font-family:'Share Tech Mono',monospace;color:var(--ok)}
+.run-controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.action-btn{font-family:'Share Tech Mono',monospace;font-size:.74rem;border:1px solid var(--border);border-radius:5px;background:transparent;color:var(--text);padding:8px 12px;cursor:pointer;transition:.2s}
+.action-btn.primary{border-color:var(--accent);background:rgba(255,107,0,.12);color:#fff}.action-btn:hover{border-color:var(--ok);color:var(--ok)}
+.action-btn.danger{border-color:rgba(255,51,85,.48);color:var(--danger);background:rgba(255,51,85,.06)}
+.action-btn.danger:hover{border-color:var(--danger);color:#fff;background:rgba(255,51,85,.18)}
+.action-btn.push-right{margin-left:auto}
+.log{font-family:'Share Tech Mono',monospace;font-size:.78rem;line-height:1.9;flex:1;min-height:0;max-height:none;overflow-y:auto}
+.event-panel{margin-bottom:14px}.event-panel .log{max-height:260px}
+.log::-webkit-scrollbar{width:4px}.log::-webkit-scrollbar-thumb{background:var(--border)}
+.le{display:flex;gap:8px;padding:3px 0;border-bottom:1px solid rgba(29,47,80,.35);opacity:0;transform:translateY(3px);animation:lineIn .25s forwards}
+@keyframes lineIn{to{opacity:1;transform:none}}
+.lt{color:var(--dim);min-width:64px}.lok{color:var(--ok)}.lwn{color:var(--warn)}.ler{color:var(--danger)}.lin{color:var(--info)}.lac{color:var(--accent)}
+.animation-stage{position:relative;flex:1;min-height:500px;border:1px solid rgba(29,47,80,.72);border-radius:8px;background:linear-gradient(180deg,rgba(16,26,46,.72),rgba(6,10,20,.42));overflow:hidden;padding:12px;display:flex;flex-direction:column;gap:10px;justify-content:flex-start}
+.animation-stage::before{content:'';position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(29,47,80,.22) 1px,transparent 1px),linear-gradient(90deg,rgba(29,47,80,.22) 1px,transparent 1px);background-size:32px 32px;opacity:.55}
+.anim-head{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.anim-title{font-family:'Share Tech Mono',monospace;color:var(--accent);font-size:.78rem;letter-spacing:1.5px;line-height:1.5}.anim-sub{font-size:.74rem;color:var(--dim);line-height:1.6}
+.anim-pill{font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--warn);border:1px solid rgba(255,204,0,.5);border-radius:4px;padding:4px 7px;background:rgba(255,204,0,.08);white-space:nowrap}
+.anim-map{position:relative;z-index:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:10px;flex:0 0 auto;align-content:start}
+.anim-site{border:1px solid rgba(51,153,255,.34);border-radius:8px;background:rgba(6,10,20,.55);padding:10px;display:flex;flex-direction:column;gap:8px;min-height:180px;position:relative;overflow:hidden}
+.anim-site.active{border-color:rgba(255,107,0,.72);box-shadow:0 0 26px rgba(255,107,0,.12)}
+.anim-site-title{font-family:'Share Tech Mono',monospace;color:var(--info);font-size:.7rem;letter-spacing:1px}
+.anim-node{border:1px solid rgba(29,47,80,.9);border-radius:6px;background:rgba(16,26,46,.86);padding:8px;min-height:58px;position:relative}
+.anim-node b{display:block;font-family:'Share Tech Mono',monospace;color:var(--text);font-size:.72rem;margin-bottom:5px}.anim-node span{font-size:.68rem;color:var(--dim)}
+.anim-vms{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}.anim-vm{font-family:'Share Tech Mono',monospace;font-size:.6rem;color:#00120d;background:var(--ok);border-radius:4px;padding:3px 6px;box-shadow:0 0 12px rgba(0,229,160,.28)}
+.anim-vm.move{position:absolute;left:8%;bottom:18px;z-index:3;animation:vmTransfer 2.1s ease-in-out infinite;background:var(--accent);color:#fff}
+.anim-vm.move.two{animation-delay:.28s;bottom:48px}.anim-vm.move.three{animation-delay:.56s;bottom:78px}.anim-vm.move.four{animation-delay:.84s;bottom:108px}
+.anim-link{position:relative;z-index:1;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);box-shadow:0 0 18px rgba(255,107,0,.35);animation:flowGlow 1.1s linear infinite}
+.anim-empty{position:relative;z-index:1;margin:34px auto 0;text-align:center;color:var(--dim);font-size:.86rem;line-height:1.8}
+.hp-anim-svg{position:relative;z-index:1;width:100%;height:auto;min-height:0;display:block;align-self:flex-start}
+.hp-site{fill:rgba(6,10,20,.5);stroke:rgba(51,153,255,.34);stroke-width:1.5}
+.hp-site.active{stroke:rgba(255,107,0,.75);stroke-width:2}
+.hp-host{fill:rgba(16,26,46,.86);stroke:rgba(29,47,80,.95);stroke-width:1.5}
+.hp-host.active{stroke:#ff6b00;stroke-width:2}
+.hp-vm{fill:rgba(0,229,160,.11);stroke:#00e5a0;stroke-width:1.4}
+.hp-vm.ghost{fill:rgba(255,107,0,.18);stroke:#ff6b00;filter:drop-shadow(0 0 8px rgba(255,107,0,.55))}
+.hp-text{font-family:'Share Tech Mono',monospace;fill:var(--text);font-size:13px}
+.hp-small{font-size:10px;fill:var(--dim)}
+.hp-label{font-size:11px;fill:var(--info);letter-spacing:1px}
+.hp-path{fill:none;stroke:#ff6b00;stroke-width:2;stroke-dasharray:7 4;opacity:.75;filter:drop-shadow(0 0 5px rgba(255,107,0,.4))}
+.hp-blink{animation:hpBlink .8s ease-in-out infinite}
+@keyframes hpBlink{0%,100%{opacity:.35;filter:drop-shadow(0 0 0 rgba(0,229,160,0))}50%{opacity:1;filter:drop-shadow(0 0 8px rgba(0,229,160,.7))}}
+.hp-power-pulse{fill:none;stroke:#00e5a0;stroke-width:2;opacity:.8;animation:hpPowerPulse 1.15s ease-out infinite;transform-origin:center;transform-box:fill-box}
+@keyframes hpPowerPulse{0%{transform:scale(.92);opacity:.85}100%{transform:scale(1.18);opacity:0}}
+.hp-boot-bar{animation:hpBootBar 1.4s ease-in-out infinite}
+@keyframes hpBootBar{0%{width:0;opacity:.45}65%{width:150px;opacity:1}100%{width:150px;opacity:.45}}
+.hp-spotlight{animation:hpSpotlight .7s ease-in-out infinite;filter:drop-shadow(0 0 22px rgba(0,229,160,.9))}
+@keyframes hpSpotlight{0%,100%{stroke:#00e5a0;stroke-width:3;fill:rgba(0,229,160,.14)}50%{stroke:#e0eaff;stroke-width:5;fill:rgba(0,229,160,.26)}}
+@keyframes vmTransfer{0%{left:8%;transform:scale(.96);opacity:.15}18%{opacity:1}55%{left:50%;transform:scale(1)}100%{left:78%;transform:scale(.96);opacity:.15}}
+@keyframes flowGlow{50%{opacity:.45;filter:brightness(1.4)}}
+.result-box{border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:13px 16px;line-height:1.85;font-size:.86rem;margin-bottom:14px}
+.result-box.ok{border-color:rgba(0,229,160,.42)}.result-box.warn{border-color:rgba(255,204,0,.48)}
+.verdict{font-family:'Share Tech Mono',monospace;margin-top:8px;font-weight:700;color:var(--ok);display:inline-flex;gap:6px;align-items:center}
+.footer{text-align:center;padding:15px 0 18px;border-top:1px solid var(--border);font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--dim)}
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(4px)}
+.modal-ov.open{display:flex}
+.modal-panel{width:min(760px,96vw);max-height:86vh;overflow:auto;background:#0c1424;border:1px solid var(--border);border-radius:12px;box-shadow:0 0 70px rgba(0,0,0,.75)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid var(--border)}
+.modal-title{font-family:'Share Tech Mono',monospace;color:var(--accent);font-size:.95rem;letter-spacing:2px}
+.modal-close{width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:1.05rem;cursor:pointer;transition:.2s}
+.modal-close:hover{border-color:var(--danger);color:var(--danger)}
+.modal-body{padding:16px 18px 18px}
+.report-wrap{display:grid;gap:12px}
+.report-input-row{display:flex;align-items:center;gap:10px;background:rgba(16,26,46,.5);border:1px solid rgba(29,47,80,.72);border-radius:6px;padding:10px 12px;flex-wrap:wrap}
+.report-input-row label{font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--dim);letter-spacing:1px;white-space:nowrap}
+.report-input-row input{flex:1;min-width:220px;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Noto Sans Thai','Share Tech Mono',sans-serif;font-size:.82rem;padding:7px 10px;outline:none}
+.report-input-row input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(255,107,0,.12)}
+.report-byline{display:flex;flex-wrap:wrap;gap:8px 18px;background:rgba(16,26,46,.42);border:1px solid rgba(29,47,80,.72);border-radius:6px;padding:9px 10px;font-size:.8rem;color:var(--text)}
+.report-byline b{font-family:'Share Tech Mono',monospace;font-size:.68rem;color:var(--dim);letter-spacing:1px;margin-right:6px}
+.report-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.report-meta .metric{min-height:auto}
+.report-table{width:100%;border-collapse:collapse;font-size:.78rem;line-height:1.65}
+.report-table th,.report-table td{border:1px solid rgba(29,47,80,.86);padding:8px;text-align:left;vertical-align:top}
+.report-table th{font-family:'Share Tech Mono',monospace;color:var(--accent);background:rgba(16,26,46,.72);font-size:.68rem;letter-spacing:1px}
+.report-table .st{font-family:'Share Tech Mono',monospace;font-size:.64rem;font-weight:700;white-space:nowrap}
+.report-table .st.pending{color:var(--dim)}.report-table .st.running{color:var(--warn)}.report-table .st.done{color:var(--ok)}.report-table .st.issue{color:var(--danger)}
+.report-block{background:rgba(16,26,46,.5);border:1px solid rgba(29,47,80,.72);border-radius:6px;padding:10px;font-size:.82rem;line-height:1.75}
+.report-block ul{margin-left:18px}
+.confirm-copy{font-size:.88rem;line-height:1.85;color:var(--text);background:rgba(16,26,46,.5);border:1px solid rgba(29,47,80,.72);border-radius:8px;padding:12px}
+.confirm-list{display:grid;gap:8px;margin-top:12px}
+.confirm-item{border:1px solid rgba(29,47,80,.72);background:rgba(6,10,20,.42);border-radius:6px;padding:9px 10px;font-size:.8rem;line-height:1.55}
+.confirm-item b{font-family:'Share Tech Mono',monospace;color:var(--accent);font-size:.68rem;letter-spacing:1px}
+@media(max-width:1100px){.btn-bar{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.cards,.overview,.main-grid{grid-template-columns:1fr}.logo-row{flex-direction:column;text-align:center}.logo-title{font-size:2.4rem}.topbar{height:auto;min-height:58px;flex-wrap:wrap;padding:10px 14px}.topbar-title{min-width:220px}.summary-grid,.vlan-list{grid-template-columns:1fr}.btn-bar{grid-template-columns:repeat(2,minmax(0,1fr))}.diagram-wrap svg{min-height:260px}.step{flex-direction:column}.step-status{grid-template-columns:repeat(4,minmax(0,1fr));justify-content:stretch}.step-status button{min-width:0}}
+@media(max-width:520px){.btn-bar{grid-template-columns:1fr}}
+.settings-fab{position:fixed;bottom:22px;right:22px;width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,107,0,.45);background:rgba(6,10,20,.94);color:var(--accent);font-size:1.15rem;cursor:pointer;z-index:90;display:grid;place-items:center;box-shadow:0 0 22px rgba(255,107,0,.18);transition:.22s}
+.settings-fab:hover{border-color:var(--accent);box-shadow:0 0 32px rgba(255,107,0,.32);transform:scale(1.1)}
+.set-grid{display:grid;gap:8px;margin-bottom:4px}
+.set-row{display:flex;align-items:center;gap:10px;background:rgba(16,26,46,.5);border:1px solid rgba(29,47,80,.72);border-radius:6px;padding:8px 12px;flex-wrap:wrap}
+.set-row label{font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--dim);min-width:148px;flex-shrink:0}
+.set-input{flex:1;min-width:80px;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.77rem;padding:6px 10px;outline:none;transition:.2s}
+.set-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(255,107,0,.12)}
+.set-input.ip-f{flex:.9;color:var(--info)}
+.set-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+<div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+
+<div id="pg-landing" class="page">
+  <div class="logo-row">
+    <div class="logo-icon" aria-label="POC simulator icon">
+      <svg class="logo-svg" viewBox="0 0 64 64" role="img" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+        <circle class="pulse" cx="32" cy="32" r="16"/>
+        <path class="flow" d="M10 36 C18 18 28 18 32 32 C36 46 46 46 54 26" stroke="#00e5a0" stroke-width="3"/>
+        <path class="flow" d="M9 24 H22 C28 24 28 40 35 40 H55" stroke="#3399ff" stroke-width="3"/>
+        <rect class="node" x="21" y="21" width="22" height="22" rx="5"/>
+        <circle cx="10" cy="36" r="3.7" fill="#ff6b00"/><circle cx="54" cy="26" r="3.7" fill="#ff6b00"/>
+        <path d="M27 32 l4 4 l7 -9" fill="none" stroke="#e0eaff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="32" y="54" text-anchor="middle" font-family="Share Tech Mono, monospace" font-size="6.2" fill="#ff6b00" letter-spacing="1">POC</text>
+</svg>
+    </div>
+    <div class="logo-title">POC Simulator</div>
+  </div>
+  <div class="subtitle">Hypervisor &amp; Backup Software Test Suite</div>
+  <div class="ver-pill">Appendix 2 &nbsp;&bull;&nbsp; Site A / Site B / Site C &nbsp;&bull;&nbsp; VMware vSphere 8</div>
+  <div class="sel-lbl">Select Test Part</div>
+  <div class="cards">
+    <div class="mode-card hyper" id="card-hyper" onclick="selectMode('hyper')">
+      <div class="mc-check">&#10003;</div>
+      <div class="mc-icon">
+        <svg viewBox="0 0 160 95" width="160" height="95" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M30 70 C55 25 105 25 130 70" fill="none" stroke="#00e5a0" stroke-width="3" stroke-dasharray="8 5"><animate attributeName="stroke-dashoffset" from="40" to="0" dur="1.3s" repeatCount="indefinite"/></path>
+          <rect x="22" y="50" width="34" height="28" rx="5" fill="#0b1528" stroke="#00e5a0"/><rect x="63" y="23" width="34" height="28" rx="5" fill="#0b1528" stroke="#3399ff"/><rect x="104" y="50" width="34" height="28" rx="5" fill="#0b1528" stroke="#ffcc00"/>
+          <circle cx="39" cy="64" r="4" fill="#00e5a0"/><circle cx="80" cy="37" r="4" fill="#3399ff"/><circle cx="121" cy="64" r="4" fill="#ffcc00"/>
+        </svg>
+      </div>
+      <div class="mc-tag">PART 1</div>
+      <div class="mc-name">Hypervisor</div>
+      <div class="mc-desc">จำลองการทดสอบ VM, Cluster, Migration, Replication, HA และการบริหารจัดการแบบรวมศูนย์</div>
+      <div class="mc-sc">HP-001 - HP-015<br>15 Test Cases</div>
+    </div>
+    <div class="mode-card backup" id="card-backup" onclick="selectMode('backup')">
+      <div class="mc-check">&#10003;</div>
+      <div class="mc-icon">
+        <svg viewBox="0 0 160 95" width="160" height="95" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M32 32 H82 C105 32 105 64 130 64" fill="none" stroke="#3399ff" stroke-width="3" stroke-dasharray="7 4"><animate attributeName="stroke-dashoffset" from="44" to="0" dur="1.2s" repeatCount="indefinite"/></path>
+          <rect x="20" y="20" width="46" height="26" rx="5" fill="#0b1528" stroke="#3399ff"/><rect x="20" y="54" width="46" height="26" rx="5" fill="#0b1528" stroke="#00e5a0"/>
+          <path d="M104 28 h28 a8 8 0 0 1 8 8 v28 a8 8 0 0 1-8 8 h-28 a8 8 0 0 1-8-8 v-28 a8 8 0 0 1 8-8z" fill="#151023" stroke="#a855f7"/>
+          <path d="M108 44 h24 M108 54 h24" stroke="#a855f7" stroke-width="2"/><circle cx="118" cy="64" r="4" fill="#00e5a0"/>
+        </svg>
+      </div>
+      <div class="mc-tag">PART 2</div>
+      <div class="mc-name">Backup Software</div>
+      <div class="mc-desc">จำลองการทดสอบ Agentless Backup, File Restore, Application Restore และ Synthetic Full</div>
+      <div class="mc-sc">BU-001 - BU-004<br>4 Test Cases</div>
+    </div>
+  </div>
+  <button id="startBtn" class="start-btn" onclick="startSelected()">INITIALIZE SELECTED PART</button>
+  <div id="hint" class="hint-txt">Choose Hypervisor or Backup Software to continue</div>
+  <div class="credit-box">
+    <div class="credit-name">POC Architecture Simulator</div>
+    <div class="credit-sub">© 2026 Built by Jaruwath Kasetsin. All rights reserved.</div>
+  </div>
+</div>
+
+<div id="pg-sim" class="page sim-page">
+  <div class="topbar">
+    <div class="topbar-icon" id="topIcon">&#9881;</div>
+    <div class="topbar-title" id="topTitle">POC SIMULATOR</div>
+    <div class="topbar-sub" id="topSub">READY</div>
+    <button class="back-link" onclick="backLanding()">BACK</button>
+  </div>
+  <div class="sim-body">
+    <div class="overview">
+      <div class="diagram-wrap">
+        <button class="info-float" type="button" onclick="openInfo()" aria-label="Open POC architecture information">i</button>
+        <svg viewBox="0 0 1180 760" role="img" aria-label="POC Architecture Diagram" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="pocGlow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="pocBlueGlow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="pocRedGlow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <marker id="arrMgmt" markerWidth="8" markerHeight="8" refX="6.5" refY="2.8" orient="auto"><path d="M0,0 L0,5.6 L7,2.8 z" fill="#c8d8f0"/></marker>
+            <marker id="arrMgmtRev" markerWidth="8" markerHeight="8" refX="0" refY="2.8" orient="auto"><path d="M7,0 L7,5.6 L0,2.8 z" fill="#c8d8f0"/></marker>
+            <marker id="arrBlue" markerWidth="8" markerHeight="8" refX="6.5" refY="2.8" orient="auto"><path d="M0,0 L0,5.6 L7,2.8 z" fill="#3399ff"/></marker>
+            <marker id="arrBlueRev" markerWidth="8" markerHeight="8" refX="6.5" refY="2.8" orient="auto-start-reverse"><path d="M0,0 L0,5.6 L7,2.8 z" fill="#3399ff"/></marker>
+            <marker id="arrGreen" markerWidth="8" markerHeight="8" refX="6.5" refY="2.8" orient="auto"><path d="M0,0 L0,5.6 L7,2.8 z" fill="#00e5a0"/></marker>
+            <marker id="arrGreenRev" markerWidth="8" markerHeight="8" refX="6.5" refY="2.8" orient="auto-start-reverse"><path d="M0,0 L0,5.6 L7,2.8 z" fill="#00e5a0"/></marker>
+            <marker id="arrGreenBoth" markerWidth="7" markerHeight="7" refX="6.2" refY="3.5" orient="auto-start-reverse"><path d="M0,0 L7,3.5 L0,7 z" fill="#00e5a0"/></marker>
+            <marker id="arrRed" markerWidth="8" markerHeight="8" refX="6.5" refY="2.8" orient="auto"><path d="M0,0 L0,5.6 L7,2.8 z" fill="#ff3355"/></marker>
+            <marker id="arrRedRev" markerWidth="8" markerHeight="8" refX="6.5" refY="2.8" orient="auto-start-reverse"><path d="M0,0 L0,5.6 L7,2.8 z" fill="#ff3355"/></marker>
+            <style>
+              .poc-bg{fill:#0b1020}
+              .poc-box{fill:#0b1322;stroke:#1e2d50;stroke-width:1.7}
+              .poc-site{fill:#0b1322;stroke:#1e2d50;stroke-width:1.7}
+              .poc-inner{fill:rgba(0,229,160,.08);stroke:#00e5a0;stroke-width:1.4}
+              .poc-store{fill:rgba(168,85,247,.09);stroke:#a855f7;stroke-width:1.4}
+              .poc-line{stroke:#c8d8f0;stroke-width:2.4;fill:none}
+              .poc-dash{stroke:#c8d8f0;stroke-width:2.4;fill:none;stroke-dasharray:9 6;stroke-linecap:round;filter:url(#pocBlueGlow)}
+              .poc-flow-slow{animation:pocFlow 1.7s linear infinite}
+              .poc-green-track{stroke:#00e5a0;stroke-width:5;opacity:.18;fill:none;stroke-linecap:round;stroke-linejoin:round}
+              .poc-green-solid{stroke:#00e5a0;stroke-width:2.8;fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:.58}
+              .poc-green-dash{stroke:#00e5a0;stroke-width:2.8;fill:none;stroke-dasharray:9 6;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 4px rgba(0,229,160,.6));animation:pocFlow 1.7s linear infinite}
+              .poc-blue-flow{stroke:#3399ff;stroke-width:3.4;fill:none;stroke-dasharray:9 4;animation:pocFlow 1s linear infinite;filter:drop-shadow(0 0 4px rgba(51,153,255,.65));stroke-linecap:round;stroke-linejoin:miter}
+              .poc-green-flow{stroke:#00e5a0;stroke-width:3.4;fill:none;stroke-dasharray:9 4;animation:pocFlow 1.15s linear infinite;filter:drop-shadow(0 0 4px rgba(0,229,160,.6));stroke-linecap:round;stroke-linejoin:miter}
+              .poc-red-flow{stroke:#ff3355;stroke-width:3.4;fill:none;stroke-dasharray:8 4;filter:url(#pocRedGlow);stroke-linecap:round}
+              .poc-red-arrow{fill:#ff3355;filter:url(#pocRedGlow)}
+              .poc-blue-arrow{fill:#3399ff;filter:url(#pocBlueGlow)}
+              .poc-green-arrow{fill:#00e5a0;filter:url(#pocGlow)}
+              .poc-node{fill:#00e5a0;opacity:.82;filter:url(#pocGlow)}
+              .poc-node-blue{fill:#3399ff;opacity:.82;filter:url(#pocBlueGlow)}
+              .poc-red-divider{
+stroke:#ff2b2b;
+stroke-width:4;
+stroke-dasharray:16 10;
+stroke-linecap:butt;
+fill:none;
+opacity:1
+}
+              .poc-title{font-family:'Share Tech Mono',monospace;font-size:25px;font-weight:700;letter-spacing:1px}
+              .poc-text{font-family:'Share Tech Mono',monospace;font-size:13px;fill:#c8d8f0}
+              .poc-small{font-family:'Share Tech Mono',monospace;font-size:12px;fill:#c8d8f0}
+              .poc-host{font-family:'Share Tech Mono',monospace;font-size:14px;fill:#e0eaff}
+              .poc-esxi{fill:#fff200}
+              .poc-esxi-t{font-family:'Share Tech Mono',monospace;font-size:18px;font-weight:700;fill:#000}
+              @keyframes pocFlow{from{stroke-dashoffset:60}to{stroke-dashoffset:0}}
+
+              .poc-label-blue{
+                fill:#6ec1ff;
+                font-weight:700;
+                letter-spacing:.5px;
+                filter:drop-shadow(0 0 4px rgba(51,153,255,.65));
+              }
+
+              .poc-label-green{
+                fill:#4dffbf;
+                font-weight:700;
+                letter-spacing:.5px;
+                filter:drop-shadow(0 0 4px rgba(0,229,160,.6));
+              }
+
+              @keyframes pocPulse{0%,100%{opacity:.7;transform:scale(.82)}50%{opacity:1;transform:scale(1.18)}}
+            </style>
+          </defs>
+          <rect class="poc-bg" x="0" y="0" width="1180" height="760"/>
+
+          <!-- BACK LAYER: red dashed divider placed early so it stays behind text and diagram elements -->
+          <line class="poc-red-divider" x1="360" y1="20" x2="360" y2="735"/>
+
+          <text id="svg-old-cluster-title" class="poc-title" x="42" y="58" fill="#c71717">Old Cluster</text>
+          <text id="svg-new-cluster-title" class="poc-title" x="1002" y="58" fill="#4b9b3d">New Cluster</text>
+<rect class="poc-esxi" x="40" y="122" width="72" height="28" rx="5"/><text class="poc-esxi-t" x="51" y="142">ESXi8</text>
+          <rect class="poc-esxi" x="770" y="56" width="72" height="28" rx="5"/><text class="poc-esxi-t" x="781" y="76">ESXi8</text>
+
+          <!-- Connection: Old Cluster vCenter → Old Cluster Rect (behind box) -->
+          <line x1="205" y1="150" x2="205" y2="185" stroke="#c8d8f0" stroke-width="5" opacity=".22" stroke-linecap="round"/>
+          <line x1="205" y1="150" x2="205" y2="185" stroke="#c8d8f0" stroke-width="2.4" stroke-dasharray="9 6" stroke-linecap="round" filter="url(#pocBlueGlow)">
+            <animate attributeName="stroke-dashoffset" from="60" to="0" dur="1.7s" repeatCount="indefinite"/>
+          </line>
+          <!-- Old Cluster vCenter Box (drawn on top of connection line) -->
+          <g>
+            <rect x="164" y="90" width="82" height="60" rx="14"
+                  fill="rgba(14,22,40,.92)" stroke="#2d4d7a" stroke-width="1.6"/>
+            <rect x="172" y="98" width="66" height="10" rx="5"
+                  fill="rgba(51,153,255,.12)"/>
+            <circle cx="180" cy="103" r="2.2" fill="#00e5a0"/>
+            <circle cx="188" cy="103" r="2.2" fill="#ffcc00"/>
+            <circle cx="196" cy="103" r="2.2" fill="#ff3355"/>
+            <text id="svg-old-cluster-vc-name"
+                  x="205" y="121" text-anchor="middle"
+                  style="font-family:'Share Tech Mono',monospace;font-size:12px;font-weight:700;fill:#d7e9ff">vCenter</text>
+            <text id="svg-old-cluster-vc-ip"
+                  x="205" y="136" text-anchor="middle"
+                  style="font-family:'Share Tech Mono',monospace;font-size:10px;fill:#6ec1ff"></text>
+          </g>
+
+          <line x1="460" y1="64" x2="621" y2="64" stroke="#ff3355" stroke-width="5" opacity=".22" stroke-linecap="round"/>
+          <line x1="460" y1="64" x2="621" y2="64" stroke="#ff3355" stroke-width="3.4" stroke-dasharray="9 4" stroke-linecap="round" filter="url(#pocRedGlow)">
+            <animate attributeName="stroke-dashoffset" from="52" to="0" dur="1.05s" repeatCount="indefinite"/>
+          </line>
+          <polygon class="poc-red-arrow" points="460,64 472,57 472,71"/>
+          <polygon class="poc-red-arrow" points="621,64 609,57 609,71"/>
+          <text class="poc-small" x="505" y="58" style="fill:#ffccd2">Active/Passive</text>
+
+          <path class="poc-dash poc-flow-slow" d="M418 92 V690 Q418 710 438 710 H590" marker-end="url(#arrMgmt)"/>
+          <path class="poc-dash poc-flow-slow" d="M418 132 H692 Q710 132 710 150 V180" marker-end="url(#arrMgmt)"/>
+          <path class="poc-dash poc-flow-slow" d="M418 116 H1042 Q1060 116 1060 134 V184" marker-end="url(#arrMgmt)"/>
+
+          <g>
+  <rect x="378" y="34" width="82" height="60" rx="14"
+        fill="rgba(14,22,40,.92)"
+        stroke="#2d4d7a"
+        stroke-width="1.6"/>
+
+  <rect x="386" y="42" width="66" height="10" rx="5"
+        fill="rgba(51,153,255,.12)"/>
+
+  <circle cx="395" cy="47" r="2.2" fill="#00e5a0"/>
+  <circle cx="403" cy="47" r="2.2" fill="#ffcc00"/>
+  <circle cx="411" cy="47" r="2.2" fill="#ff3355"/>
+
+  <text id="svg-old-vcenter-name"
+        class="poc-small"
+        x="419" y="65"
+        text-anchor="middle"
+        style="font-size:12px;font-weight:700;fill:#d7e9ff">vCenter</text>
+  <text id="svg-old-vcenter-ip"
+        x="419" y="80"
+        text-anchor="middle"
+        style="font-family:'Share Tech Mono',monospace;font-size:10px;fill:#6ec1ff"></text>
+</g>
+<g>
+  <rect x="621" y="34" width="82" height="60" rx="14"
+        fill="rgba(14,22,40,.92)"
+        stroke="#2d4d7a"
+        stroke-width="1.6"/>
+
+  <rect x="629" y="42" width="66" height="10" rx="5"
+        fill="rgba(51,153,255,.12)"/>
+
+  <circle cx="638" cy="47" r="2.2" fill="#00e5a0"/>
+  <circle cx="646" cy="47" r="2.2" fill="#ffcc00"/>
+  <circle cx="654" cy="47" r="2.2" fill="#ff3355"/>
+
+  <text id="svg-new-vcenter-name"
+        class="poc-small"
+        x="662" y="65"
+        text-anchor="middle"
+        style="font-size:12px;font-weight:700;fill:#d7e9ff">vCenter</text>
+  <text id="svg-new-vcenter-ip"
+        x="662" y="80"
+        text-anchor="middle"
+        style="font-family:'Share Tech Mono',monospace;font-size:10px;fill:#6ec1ff"></text>
+</g>
+
+          <rect class="poc-site" x="110" y="185" width="190" height="200" rx="13"/>
+          <text id="svg-old-cluster-site-label" class="poc-text" x="143" y="208" font-weight="700">Existing VMware 8</text>
+          <rect class="poc-inner" x="148" y="228" width="33" height="30" rx="5"/><text class="poc-small" x="164" y="248" text-anchor="middle">VM1</text>
+          <rect class="poc-inner" x="218" y="228" width="33" height="30" rx="5"/><text class="poc-small" x="234" y="248" text-anchor="middle">VM2</text>
+          <rect class="poc-inner" x="126" y="268" width="152" height="48" rx="9"/>
+          <text id="svg-old-esxi-name" class="poc-host" x="202" y="287" text-anchor="middle" style="font-size:13px">ESXi</text>
+          <text id="svg-old-esxi-ip" x="202" y="305" text-anchor="middle" style="font-family:'Share Tech Mono',monospace;font-size:10px;fill:#6ec1ff"></text>
+
+          <rect class="poc-site" x="470" y="185" width="430" height="200" rx="13"/>
+          <text id="svg-site-a-label" class="poc-text" x="655" y="208" font-weight="700">Site A (DC)</text>
+          <rect class="poc-inner" x="482" y="228" width="34" height="30" rx="5"/><text class="poc-small" x="499" y="248" text-anchor="middle">VM1</text>
+          <rect class="poc-inner" x="535" y="228" width="34" height="30" rx="5"/><text class="poc-small" x="552" y="248" text-anchor="middle">VM2</text>
+          <rect class="poc-inner" x="588" y="228" width="34" height="30" rx="5"/><text class="poc-small" x="605" y="248" text-anchor="middle">VM3</text>
+          <rect class="poc-inner" x="641" y="228" width="34" height="30" rx="5"/><text class="poc-small" x="658" y="248" text-anchor="middle">VM4</text>
+          <rect class="poc-inner" x="694" y="228" width="34" height="30" rx="5"/><text class="poc-small" x="711" y="248" text-anchor="middle">VM5</text>
+          <rect class="poc-inner" x="747" y="228" width="34" height="30" rx="5"/><text class="poc-small" x="764" y="248" text-anchor="middle">VM6</text>
+          <rect class="poc-inner" x="800" y="228" width="34" height="30" rx="5"/><text class="poc-small" x="817" y="248" text-anchor="middle">VM7</text>
+          <rect class="poc-inner" x="853" y="228" width="34" height="30" rx="5"/><text class="poc-small" x="870" y="248" text-anchor="middle">VM8</text>
+          <rect class="poc-inner" x="482" y="268" width="120" height="48" rx="9"/>
+          <text id="svg-host1-name" class="poc-host" x="542" y="287" text-anchor="middle" style="font-size:13px">Host 1</text>
+          <text id="svg-host1-ip" x="542" y="305" text-anchor="middle" style="font-family:'Share Tech Mono',monospace;font-size:10px;fill:#6ec1ff"></text>
+          <rect class="poc-inner" x="618" y="268" width="120" height="48" rx="9"/>
+          <text id="svg-host2-name" class="poc-host" x="678" y="287" text-anchor="middle" style="font-size:13px">Host 2</text>
+          <text id="svg-host2-ip" x="678" y="305" text-anchor="middle" style="font-family:'Share Tech Mono',monospace;font-size:10px;fill:#6ec1ff"></text>
+          <rect class="poc-inner" x="754" y="268" width="120" height="48" rx="9"/>
+          <text id="svg-host3-name" class="poc-host" x="814" y="287" text-anchor="middle" style="font-size:13px">Host 3</text>
+          <text id="svg-host3-ip" x="814" y="305" text-anchor="middle" style="font-family:'Share Tech Mono',monospace;font-size:10px;fill:#6ec1ff"></text>
+          <rect class="poc-store" x="482" y="326" width="392" height="44" rx="8"/>
+          <text id="svg-storage-name" class="poc-host" x="678" y="341" text-anchor="middle" style="font-size:13px">Storage</text>
+          <text id="svg-storage-ip" x="678" y="357" text-anchor="middle" style="font-family:'Share Tech Mono',monospace;font-size:10px;fill:#c084fc"></text>
+
+          <rect class="poc-site" x="948" y="185" width="190" height="200" rx="13"/>
+          <text id="svg-site-b-label" class="poc-text" x="993" y="210" font-weight="700">Site B (MM)</text>
+          <rect class="poc-inner" x="965" y="268" width="135" height="48" rx="9"/>
+          <text id="svg-host4-name" class="poc-host" x="1032" y="287" text-anchor="middle" style="font-size:13px">Host 4</text>
+          <text id="svg-host4-ip" x="1032" y="305" text-anchor="middle" style="font-family:'Share Tech Mono',monospace;font-size:10px;fill:#6ec1ff"></text>
+          <path d="M720 385 V410 Q720 420 730 420 H859 Q869 420 869 430 V446" stroke="#00e5a0" stroke-width="5" opacity=".18" fill="none" stroke-linecap="butt"/>
+          <path d="M720 385 V410 Q720 420 730 420 H859 Q869 420 869 430 V446" stroke="#00e5a0" stroke-width="2.8" stroke-dasharray="9 6" stroke-linecap="butt" filter="url(#pocGlow)" fill="none">
+            <animate attributeName="stroke-dashoffset" from="60" to="0" dur="1.7s" repeatCount="indefinite"/>
+          </path>
+          <polygon class="poc-green-arrow" points="720,385 714,397 726,397"/>
+          <polygon class="poc-green-arrow" points="869,446 863,434 875,434"/>
+          <line x1="680" y1="385" x2="680" y2="620" stroke="#00e5a0" stroke-width="5" opacity=".18" stroke-linecap="butt"/>
+          <line x1="680" y1="385" x2="680" y2="620" stroke="#00e5a0" stroke-width="2.8" stroke-dasharray="9 6" stroke-linecap="butt" filter="url(#pocGlow)">
+            <animate attributeName="stroke-dashoffset" from="60" to="0" dur="1.7s" repeatCount="indefinite"/>
+          </line>
+          <polygon class="poc-green-arrow" points="680,385 674,397 686,397"/>
+          <polygon class="poc-green-arrow" points="680,620 674,608 686,608"/>
+          <path d="M869 510 V535 Q869 545 859 545 H730 Q720 545 720 555 V620" stroke="#00e5a0" stroke-width="5" opacity=".18" fill="none" stroke-linecap="butt"/>
+          <path d="M869 510 V535 Q869 545 859 545 H730 Q720 545 720 555 V620" stroke="#00e5a0" stroke-width="2.8" stroke-dasharray="9 6" stroke-linecap="butt" filter="url(#pocGlow)" fill="none">
+            <animate attributeName="stroke-dashoffset" from="60" to="0" dur="1.7s" repeatCount="indefinite"/>
+          </path>
+          <polygon class="poc-green-arrow" points="869,510 863,522 875,522"/>
+          <polygon class="poc-green-arrow" points="720,620 714,608 726,608"/>
+          <line x1="944" y1="478" x2="1002" y2="478" stroke="#00e5a0" stroke-width="5" opacity=".18" stroke-linecap="butt"/>
+          <line x1="944" y1="478" x2="1002" y2="478" stroke="#00e5a0" stroke-width="2.8" stroke-dasharray="9 6" stroke-linecap="butt" filter="url(#pocGlow)">
+            <animate attributeName="stroke-dashoffset" from="60" to="0" dur="1.7s" repeatCount="indefinite"/>
+          </line>
+          <polygon class="poc-green-arrow" points="944,478 956,472 956,484"/>
+          <polygon class="poc-green-arrow" points="1002,478 990,472 990,484"/>
+
+          <rect class="poc-site" x="590" y="620" width="185" height="108" rx="13"/>
+          <text id="svg-site-c-label" class="poc-text" x="650" y="643" font-weight="700">Site C (DR)</text>
+          <rect class="poc-inner" x="607" y="685" width="148" height="34" rx="8"/>
+          <text id="svg-host5-name" class="poc-host" x="681" y="699" text-anchor="middle" style="font-size:12px">Host 5</text>
+          <text id="svg-host5-ip" x="681" y="714" text-anchor="middle" style="font-family:'Share Tech Mono',monospace;font-size:10px;fill:#6ec1ff"></text>
+
+          <!-- Backup Server / Proxy -->
+          <g>
+            <rect x="826" y="446" width="118" height="64" rx="18"
+                  fill="rgba(10,18,32,.92)"
+                  stroke="#2b4d78"
+                  stroke-width="1.5"/>
+
+            <rect x="834" y="454" width="102" height="10" rx="5"
+                  fill="rgba(51,153,255,.12)"/>
+
+            <circle cx="842" cy="459" r="2.1" fill="#00e5a0"/>
+            <circle cx="849" cy="459" r="2.1" fill="#ffcc00"/>
+            <circle cx="856" cy="459" r="2.1" fill="#ff3355"/>
+
+            <text id="svg-bkp-server-name"
+                  x="885" y="473"
+                  text-anchor="middle"
+                  style="font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:700;fill:#dbeafe">Backup Server</text>
+            <text id="svg-bkp-server-ip"
+                  x="885" y="487"
+                  text-anchor="middle"
+                  style="font-family:'Share Tech Mono',monospace;font-size:10px;fill:#6ec1ff"></text>
+            <text x="885" y="503"
+                  text-anchor="middle"
+                  style="font-family:'Share Tech Mono',monospace;font-size:10px;fill:#7dd3fc">Server / Proxy</text>
+          </g>
+
+          <!-- Backup Storage / Repository -->
+          <g>
+            <rect x="1002" y="446" width="150" height="64" rx="18"
+                  fill="rgba(14,16,32,.94)"
+                  stroke="#6d3bbd"
+                  stroke-width="1.5"/>
+
+            <rect x="1012" y="454" width="130" height="10" rx="5"
+                  fill="rgba(168,85,247,.14)"/>
+
+            <circle cx="1020" cy="459" r="2.1" fill="#00e5a0"/>
+            <circle cx="1027" cy="459" r="2.1" fill="#ffcc00"/>
+            <circle cx="1034" cy="459" r="2.1" fill="#ff3355"/>
+
+            <text id="svg-bkp-storage-name"
+                  x="1077" y="473"
+                  text-anchor="middle"
+                  style="font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:700;fill:#f3e8ff">Backup Storage</text>
+            <text id="svg-bkp-storage-ip"
+                  x="1077" y="487"
+                  text-anchor="middle"
+                  style="font-family:'Share Tech Mono',monospace;font-size:10px;fill:#6ec1ff"></text>
+            <text x="1077" y="503"
+                  text-anchor="middle"
+                  style="font-family:'Share Tech Mono',monospace;font-size:11px;fill:#d8b4fe">Repository</text>
+          </g>
+
+          <rect x="632" y="458" width="138" height="24" rx="7"
+      fill="rgba(11,19,34,.92)"/>
+
+<text class="poc-text poc-label-green" x="644" y="474">
+  VM Replication
+</text>
+
+        
+          <!-- FRONT LAYER: VM Migration path placed last so it stays above divider and other elements -->
+          <g id="vm-migration-front">
+            <line x1="302" y1="240" x2="468" y2="240" stroke="#3399ff" stroke-width="5" opacity=".22" stroke-linecap="round"/>
+            <line x1="302" y1="240" x2="468" y2="240" stroke="#3399ff" stroke-width="3.4" stroke-dasharray="9 4" stroke-linecap="round" filter="url(#pocBlueGlow)">
+              <animate attributeName="stroke-dashoffset" from="52" to="0" dur=".95s" repeatCount="indefinite"/>
+            </line>
+
+            <!-- label background first -->
+            <rect x="332" y="198" width="128" height="24" rx="7"
+                  fill="rgba(11,19,34,.92)"/>
+
+            <!-- arrows rendered AFTER background so they stay on same front layer -->
+            <polygon class="poc-blue-arrow" points="302,240 312,234 312,246"/>
+            <polygon class="poc-blue-arrow" points="468,240 458,234 458,246"/>
+
+            <!-- text rendered last -->
+            <text class="poc-text poc-label-blue" x="344" y="215">VM Migration</text>
+          </g>
+</svg>
+      </div>
+    </div>
+    <div class="modal-ov" id="infoModal" onclick="modalBackdrop(event)">
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
+        <div class="modal-head">
+          <div class="modal-title" id="infoTitle">POC Architecture Scope</div>
+          <button class="modal-close" type="button" onclick="closeInfo()" aria-label="Close information modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="summary-grid" id="summaryGrid"></div>
+          <div class="section-label">IP &amp; VLAN Assignment</div>
+          <div class="vlan-list">
+            <div class="vlan"><b>VLAN 10</b><br>Management - 10.0.10.0/24</div>
+            <div class="vlan"><b>VLAN 20</b><br>vMotion - 10.0.20.0/24</div>
+            <div class="vlan"><b>VLAN 30</b><br>vSAN / Storage - 10.0.30.0/24</div>
+            <div class="vlan"><b>VLAN 40</b><br>VM Production - 10.0.40.0/24</div>
+            <div class="vlan"><b>VLAN 50</b><br>Replication &amp; Backup - 10.0.50.0/24</div>
+            <div class="vlan"><b>VLAN 100</b><br>Old Cluster All-in-one</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="btn-bar" id="caseButtons"></div>
+    <div class="main-grid">
+      <div class="panel">
+        <div class="case-head">
+          <div>
+            <div class="case-id" id="caseId">READY</div>
+            <div class="case-name" id="caseName">เลือก Test Case เพื่อเริ่มจำลอง</div>
+          </div>
+          <div class="status-pill" id="caseStatus">WAITING</div>
+        </div>
+        <div class="section-label">Description</div>
+        <div class="case-desc" id="caseDesc">ระบบจะแสดงขั้นตอนทดสอบ ผลลัพธ์ที่คาดหวัง และตัวชี้วัดจากเอกสาร POC</div>
+        <div class="section-label">Prerequisites / Pre-conditions</div>
+        <div class="detail-list" id="casePrereq"></div>
+        <div class="section-label">Test Procedures</div>
+        <div class="steps" id="caseSteps"></div>
+        <div class="section-label">Expected Results</div>
+        <div class="detail-list" id="caseExpected"></div>
+        <div class="section-label">Indicators</div>
+        <div class="indicators" id="caseIndicators"></div>
+        <div class="run-controls">
+          <button class="action-btn primary" onclick="runCurrent()">RUN SIMULATION</button>
+          <button class="action-btn" onclick="generateReport()">GEN REPORT</button>
+          <button class="action-btn" onclick="resetRun(true)">RESET</button>
+          <button class="action-btn danger push-right" onclick="resetAllStepStatuses()">RESET ALL</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Procedure Animation</div>
+        <div class="animation-stage" id="animationStage"></div>
+      </div>
+    </div>
+    <div class="result-box" id="resultBox">
+      <span style="color:var(--dim)">เลือก Test Case เพื่อดู Acceptance Criteria...</span>
+    </div>
+    <div class="panel event-panel">
+      <div class="panel-title">Event Log</div>
+      <div class="log" id="eventLog"></div>
+    </div>
+    <div class="footer">POC Simulator &bull; Hypervisor Manager Centralized Management &bull; Backup Server / Proxy / Repository</div>
+  </div>
+</div>
+
+<!-- Reset All Confirm Modal -->
+<div class="modal-ov" id="resetAllModal" onclick="resetAllBackdrop(event)">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="resetAllTitle" style="width:min(640px,96vw)">
+    <div class="modal-head">
+      <div class="modal-title" id="resetAllTitle">RESET ALL TEST PROCEDURE STATUS</div>
+      <button class="modal-close" type="button" onclick="closeResetAllModal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="confirm-copy">
+        การล้างนี้จะ reset สถานะของ Test Procedures ทั้งหมดกลับเป็น <b>PENDING</b> เพื่อเริ่มติดตามผลใหม่ตั้งแต่ต้น
+        <div class="confirm-list">
+          <div class="confirm-item"><b>ล้าง</b><br>สถานะ Step ของ Hypervisor test cases ทั้งหมด HP-001 ถึง HP-015</div>
+          <div class="confirm-item"><b>ล้าง</b><br>สถานะ Step ของ Backup Software test cases ทั้งหมด BU-001 ถึง BU-004</div>
+          <div class="confirm-item"><b>ไม่ล้าง</b><br>Diagram settings, IP/ชื่ออุปกรณ์, รายละเอียด Test Case และข้อมูลในไฟล์นี้</div>
+        </div>
+      </div>
+      <div class="set-actions">
+        <button class="action-btn" onclick="closeResetAllModal()">CANCEL</button>
+        <button class="action-btn danger" onclick="confirmResetAllStepStatuses()">RESET ALL STATUS</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Report Modal -->
+<div class="modal-ov" id="reportModal" onclick="reportBackdrop(event)">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="reportTitle" style="width:min(980px,96vw)">
+    <div class="modal-head">
+      <div class="modal-title" id="reportTitle">TEST PROCEDURE REPORT</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="action-btn primary" onclick="printReport()" style="font-size:.68rem">PRINT / SAVE PDF</button>
+        <button class="modal-close" type="button" onclick="closeReportModal()" aria-label="Close">&times;</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="report-input-row">
+        <label for="reportTesterName">TESTER NAME</label>
+        <input id="reportTesterName" type="text" placeholder="กรอกชื่อผู้ทดสอบก่อน Print / Save PDF" oninput="refreshReportPreview()">
+      </div>
+      <div id="reportContent" class="report-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-ov" id="settingsModal" onclick="settingsBackdrop(event)">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" style="width:min(820px,96vw)">
+    <div class="modal-head">
+      <div class="modal-title" id="settingsTitle">&#9881; DIAGRAM SETTINGS</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="action-btn" onclick="resetDiagramSettings()" style="font-size:.68rem;border-color:rgba(255,51,85,.5);color:var(--danger)">&#8635; RESET DEFAULT</button>
+        <button class="modal-close" type="button" onclick="closeSettingsModal()" aria-label="Close">&times;</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="section-label" style="margin-top:0">Cluster &amp; Site Labels</div>
+      <div class="set-grid">
+        <div class="set-row"><label>Old Cluster Label</label><input id="si-old-cluster" class="set-input" type="text" placeholder="Old Cluster"/></div>
+        <div class="set-row"><label>New Cluster Label</label><input id="si-new-cluster" class="set-input" type="text" placeholder="New Cluster"/></div>
+        <div class="set-row"><label>Site A Label</label><input id="si-site-a" class="set-input" type="text" placeholder="Site A (DC)"/></div>
+        <div class="set-row"><label>Site B Label</label><input id="si-site-b" class="set-input" type="text" placeholder="Site B (MM)"/></div>
+        <div class="set-row"><label>Site C Label</label><input id="si-site-c" class="set-input" type="text" placeholder="Site C (DR)"/></div>
+      </div>
+      <div class="section-label">Old Cluster — ESXi</div>
+      <div class="set-grid">
+        <div class="set-row"><label>ESXi (Old Cluster)</label><input id="si-esxi-name" class="set-input" type="text" placeholder="ชื่อเครื่อง"/><input id="si-esxi-ip" class="set-input ip-f" type="text" placeholder="IP Address"/></div>
+      </div>
+      <div class="section-label">vCenter</div>
+      <div class="set-grid">
+        <div class="set-row"><label>Old Cluster vCenter</label><input id="si-ocvc-name" class="set-input" type="text" placeholder="ชื่อเครื่อง"/><input id="si-ocvc-ip" class="set-input ip-f" type="text" placeholder="IP Address"/></div>
+        <div class="set-row"><label>Active vCenter</label><input id="si-ovc-name" class="set-input" type="text" placeholder="ชื่อเครื่อง"/><input id="si-ovc-ip" class="set-input ip-f" type="text" placeholder="IP Address"/></div>
+        <div class="set-row"><label>Passive vCenter</label><input id="si-nvc-name" class="set-input" type="text" placeholder="ชื่อเครื่อง"/><input id="si-nvc-ip" class="set-input ip-f" type="text" placeholder="IP Address"/></div>
+      </div>
+      <div class="section-label">Hosts — Site A</div>
+      <div class="set-grid">
+        <div class="set-row"><label>Host 1</label><input id="si-h1-name" class="set-input" type="text" placeholder="ชื่อเครื่อง"/><input id="si-h1-ip" class="set-input ip-f" type="text" placeholder="IP Address"/></div>
+        <div class="set-row"><label>Host 2</label><input id="si-h2-name" class="set-input" type="text" placeholder="ชื่อเครื่อง"/><input id="si-h2-ip" class="set-input ip-f" type="text" placeholder="IP Address"/></div>
+        <div class="set-row"><label>Host 3</label><input id="si-h3-name" class="set-input" type="text" placeholder="ชื่อเครื่อง"/><input id="si-h3-ip" class="set-input ip-f" type="text" placeholder="IP Address"/></div>
+        <div class="set-row"><label>Storage (Site A)</label><input id="si-storage-name" class="set-input" type="text" placeholder="ชื่อเครื่อง"/><input id="si-storage-ip" class="set-input ip-f" type="text" placeholder="IP Address"/></div>
+      </div>
+      <div class="section-label">Hosts — Site B &amp; Site C</div>
+      <div class="set-grid">
+        <div class="set-row"><label>Host 4 (Site B)</label><input id="si-h4-name" class="set-input" type="text" placeholder="ชื่อเครื่อง"/><input id="si-h4-ip" class="set-input ip-f" type="text" placeholder="IP Address"/></div>
+        <div class="set-row"><label>Host 5 (Site C)</label><input id="si-h5-name" class="set-input" type="text" placeholder="ชื่อเครื่อง"/><input id="si-h5-ip" class="set-input ip-f" type="text" placeholder="IP Address"/></div>
+      </div>
+      <div class="section-label">Backup Infrastructure</div>
+      <div class="set-grid">
+        <div class="set-row"><label>Backup Server / Proxy</label><input id="si-bks-name" class="set-input" type="text" placeholder="ชื่อเครื่อง"/><input id="si-bks-ip" class="set-input ip-f" type="text" placeholder="IP Address"/></div>
+        <div class="set-row"><label>Backup Storage / Repo</label><input id="si-bkr-name" class="set-input" type="text" placeholder="ชื่อเครื่อง"/><input id="si-bkr-ip" class="set-input ip-f" type="text" placeholder="IP Address"/></div>
+      </div>
+      <div class="set-actions">
+        <button class="action-btn" onclick="closeSettingsModal()">CANCEL</button>
+        <button class="action-btn primary" onclick="saveSettingsForm()">&#10003; SAVE &amp; APPLY</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Floating Settings Button -->
+<button class="settings-fab" onclick="openSettingsModal()" title="Diagram Settings">&#9881;</button>
+
+<script>
+const cases={
+  hyper:[
+    {id:'HP-001',name:'VM Live Migration',desc:'เพื่อทดสอบความสามารถในการย้ายการทำงานของ VM จาก Host ไปยังอีก Host ภายใน Cluster เดียวกันและระหว่าง Cluster',prereq:['Host ใน Site A และ Site B อยู่ในสถานะปกติ โดยมี VM ทำงานอยู่บน Host 1 จำนวน 8 VM โดยให้ VM เขียนไฟล์ Text ขนาด 1 MB ทุก 5 วินาที ที่มีชื่อไฟล์เป็น Timestamp'],steps:['Live Migration VM จำนวน 2 VM จาก Host 1 ไปยัง Host 2 พร้อมกัน (Site A)','ตรวจสอบสถานะของ VM','Live Migration VM จำนวน 4 VM จาก Host 1 ไปยัง Host 2 พร้อมกัน (Site A)','ตรวจสอบสถานะของ VM','Live Migration VM ที่เหลือยังไป Host 2 (Site A)','Live Migration VM ทั้ง 8 VM จาก Host 2 (Site A) ไปยัง Host 4 (Site B) พร้อมกันทั้งหมด','ตรวจสอบสถานะของ VM'],expected:['VM ถูก Live Migration จาก Host 1 ไปทำงานบน Host 2 ใน Site A ได้พร้อมกันทั้งการทดสอบย้าย 2 VM และ 4 VM โดยยังคงทำงานได้อย่างต่อเนื่อง','VM ถูก Live Migration จาก Host 2 ใน Site A ไปทำงานบน Host 4 ใน Site B พร้อมกันทั้ง 8 VM โดยยังคงทำงานได้อย่างต่อเนื่อง'],indicators:['VM สามารถเขียนไฟล์ได้ต่อเนื่องทุก 5 วินาที','VM ถูกย้ายพร้อมกันได้อย่างน้อย 4 VM']},
+    {id:'HP-002',name:'VM Storage Live Migration',desc:'เพื่อทดสอบความสามารถในการย้ายไฟล์ VM จาก Storage Volume ไปยังอีก Storage Volume',prereq:['Storage Volume 1 และ Storage Volume 2 อยู่ในสถานะปกติ ซึ่งเข้าถึงได้จาก Host 1 บน Site A และมี VM ทำงานอยู่บน Host 1 และเก็บข้อมูลบน Storage Volume 1 อย่างน้อย 1 VM และให้ VM เขียนไฟล์ Text ขนาด 1 MB ทุก 5 วินาที ที่มีชื่อไฟล์เป็น Timestamp'],steps:['ทดสอบ Ping ไปยัง VM ที่ทดสอบค้างไว้ (ping -t)','Storage Live Migration VM จาก Storage Volume 1 ไปยัง Storage Volume 2','ตรวจสอบสถานะของ VM และตรวจสอบข้อมูล VM บน Storage Volume 1 และ 2'],expected:['VM ทำงานได้อย่างต่อเนื่อง และข้อมูล VM ถูกย้ายจาก Storage Volume 1 ไปยัง Storage Volume 2'],indicators:['VM ไม่มี Ping loss','VM สามารถเขียนไฟล์ได้ต่อเนื่องทุก 5 วินาที']},
+    {id:'HP-003',name:'Flash-based device / USB support',desc:'เพื่อทดสอบการใช้งาน USB Device บน VM',prereq:['USB Device เชื่อมต่ออยู่บน Host 1 หรือบนอุปกรณ์ที่เชื่อมต่อกับ Host 1 โดย USB Device มีไฟล์ PDF หรือ Text ขนาดไม่น้อยกว่า 5MB และสามารถเข้าถึงและใช้งานได้จาก VM ที่ทำงานอยู่บน Host 1'],steps:['ตั้งค่าให้ USB Device สามารถเรียกใช้งานได้จาก VM บน Host 1','ตรวจสอบสถานะการเข้าถึงและใช้งานเขียนและอ่านไฟล์บน USB Device ของ VM บน Host 1'],expected:['VM สามารถเข้าถึงและใช้งานเขียนและอ่านไฟล์บน USB Device ที่เชื่อมต่ออยู่บน Host 1 ได้'],indicators:['VM สามารถเข้าถึงและใช้งานเขียนและอ่านไฟล์บน USB Device ที่เชื่อมต่ออยู่บน Host 1 ได้']},
+    {id:'HP-004',name:'VM Cloning',desc:'เพื่อทดสอบความสามารถในการ Clone VM',prereq:['VM ทำงานอยู่บน Host 1 และ มีไฟล์ Text ขนาด 5MB อยู่บน VM อย่างน้อย 1 ไฟล์'],steps:['Cloning VM','Power-on VM','ตรวจสอบสถานะของ VM และตรวจสอบไฟล์ข้อมูลบน VM'],expected:['VM สามารถเปิดใช้งานได้ปกติ โดย VM มีข้อมูลเหมือนกับ VM ต้นฉบับ'],indicators:['VM สามารถเปิดใช้งานได้ปกติ โดย VM มีข้อมูลเหมือนกับ VM ต้นฉบับ']},
+    {id:'HP-005',name:'VM Snapshot',desc:'เพื่อทดสอบความสามารถในการสร้าง Snapshot ย้อน Snapshot และลบ Snapshot ของ VM',prereq:['VM ทำงานอยู่บน Host 1 มีข้อมูลทดสอบเป็นไฟล์ Text ขนาด 5MB อยู่บน VM อย่างน้อย 1 ไฟล์ และ VM ไม่มีสถานะ Snapshot ค้างอยู่'],steps:['สั่ง Snapshot VM','ตรวจสอบสถานะของ Snapshot และ VM','ลบข้อมูลทดสอบบน VM','นำ Snapshot เวอร์ชั่นก่อนหน้ากลับมาใช้งาน','ตรวจสอบข้อมูลทดสอบบน VM','สั่งลบ Snapshot ทั้งหมด','ตรวจสอบสถานะของ VM และสถานะของ Snapshot'],expected:['VM ถูก Snapshot สำเร็จ','สามารถนำ Snapshot ของ VM กลับมาใช้ได้งาน และ VM มีข้อมูลเหมือน ณ ตอนสั่ง Snapshot'],indicators:['VM ถูก Snapshot สำเร็จ','สามารถนำ Snapshot ของ VM กลับมาใช้ได้งาน และ VM มีข้อมูลเหมือน ณ ตอนสั่ง Snapshot']},
+    {id:'HP-006',name:'VM Templates and Image Management',desc:'เพื่อทดสอบความสามารถในการบริหารจัดการ VM Template, VM Image',prereq:['VM OS Window Server 2016 ทำงานอยู่บน Host 1 โดยติดตั้งโปรแกรม IIS 10 เพื่อใช้เป็น VM Template','ไฟล์ Image VM OS Windows Server 2016 ในรูปแบบ OVA หรือ OVF หรือ QCOW2 เพื่อใช้ในการทดสอบ Deploy from Image'],steps:['สร้าง VM Template จาก VM ต้นฉบับบน Host 1','สั่ง Deploy VM จาก VM Template ที่สร้างไว้','Power-on VM และตรวจสอบสถานะของ VM','Upload Image File และ Deploy VM','Power-on VM และตรวจสอบสถานะ VM'],expected:['VM ที่ Deploy มี OS และ Software เหมือนกับ VM Template โดยสามารถทำงานได้ปกติ และ VM ที่ Deploy จาก Image มีคุณสมบัติเหมือนกับไฟล์ Image ต้นแบบ โดยสามารถทำงานได้ปกติ'],indicators:['VM ที่ถูก Deploy จาก VM Template มี OS และ Software เหมือนกับ VM Template','VM ที่ Deploy จาก Image มีคุณสมบัติเหมือนกับไฟล์ Image ต้นแบบ']},
+    {id:'HP-007',name:'VM Operating System Support',desc:'เพื่อทดสอบความสามารถในการรองรับ VM ที่มีระบบปฏิบัติการต่างๆ',prereq:['ISO Image ของ OS ที่ต้องการทดสอบ'],steps:['สร้าง VM ที่มี OS Version ดังนี้\n- Ubuntu 24.04\n- CentOS 8 หรือ CentOS Stream 10\n- Debian 12\n- RHEL 9\n- SUSE Linux Enterprise Server 15\n- Windows Server 2012, 2016, 2022, 2025','Power-on VM ทั้งหมด','ติดตั้ง VM Tools','ตรวจสอบสถานะของแต่ละ VM'],expected:['VM ถูกสร้างขึ้นสำเร็จ สามารถใช้งานได้ปกติ'],indicators:['สร้าง VM ได้ครบตามรายการ OS ตรงกับ version ที่กำหนด','VM สามารถติดตั้ง VM Tool ได้สำเร็จ']},
+    {id:'HP-008',name:'VM Resource Hot Add',desc:'เพื่อทดสอบความสามารถในการเพิ่ม Resource ให้กับ VM โดยไม่กระทบการทำงานของ VM',prereq:['VM OS Windows Server 2016 ทำงานอยู่บน Host 1 มี 4 vCPU Harddisk 1 หน่วยขนาด 100GB'],steps:['ทดสอบ Ping ไปยัง VM ที่ทดสอบค้างไว้ (ping -t)','เพิ่ม vCPU จำนวน 4 vCPU และเพิ่ม Disk ของ VM 1 หน่วยขนาด 50GB','ตรวจสอบสถานะและจำนวนของ vCPU และ Disk บน VM','ทดสอบ Mount Disk และ Format Disk','เขียนไฟล์ บน Disk ที่ถูกเพิ่ม'],expected:['VM มองเห็น vCPU และ Disk เท่ากับจำนวนที่เพิ่มขึ้นโดยไม่ต้อง Restart VM และ Disk สามารถ Format ใช้งานเขียนและอ่านไฟล์ได้'],indicators:['VM มี vCPU ขนาด 8 vCPU และ Disk มีจำนวน 2 หน่วย ขนาด 100GB และ 50GB ตามลำดับ','VM ไม่มี ping loss ในขณะเพิ่ม resource','VM เขียนและอ่านไฟล์บน Disk ที่เพิ่มได้']},
+    {id:'HP-009',name:'VM CPU and Memory Overcommitting',desc:'เพื่อทดสอบความสามารถในการกำหนด vCPU และ Memory ให้กับ VM โดยที่จำนวน vCPU รวมทุก VM มากกว่าจำนวน Physical Cores บน Host และจำนวน Memory รวมทุก VM มากกว่าจำนวน Physical Memory บน Host',prereq:['VM ทำงานอยู่บน Host 1 มากกว่า 1 VM โดยที่มีจำนวน vCPU รวมทุก VM เท่ากับจำนวน Physical cores'],steps:['สร้าง VM ที่มี vCPU อย่างน้อย 4 vCPU บน Host 1','Power-on VM และตรวจสอบสถานะของ VM','ตรวจสอบจำนวน vCPU รวมทั้งหมดของทุก VM ที่ทำงานอยู่บน Host','ทดสอบอ่านเขียนไฟล์บน VM ที่สร้างขึ้น','Shutdown VM','เพิ่ม Memory ของ VM ให้มีขนาดมากกว่าจำนวน Physical Memory ของ Host','Power-on VM และตรวจสอบสถานะของ VM','ตรวจสอบจำนวน Memory บน VM ดังกล่าว'],expected:['สามารถสร้าง VM โดยที่มีจำนวน vCPU รวมมากกว่า Physical cores ของ Host ได้ และสามารถเพิ่ม Memory ได้มากกว่าจำนวน Physical Memory ของ Host และสามารถ Power-on VM ได้'],indicators:['สร้าง VM สำเร็จ และสามารถ Power-on ได้','จำนวน vCPU รวมของ VM มีมากกว่า Physical cores บน Host','VM เขียนและอ่านไฟล์ได้','เพิ่ม Memory ให้ VM สำเร็จและสามารถ Power-on ได้','จำนวน Memory มากกว่าจำนวน Physical Memory ของ Host']},
+    {id:'HP-010',name:'VM Replication and Failover plan',desc:'เพื่อทดสอบความสามารถในการคัดลอกข้อมูล (Replicate) VM จากต้นฉบับ (Primary) ไปยังศูนย์สำรอง (Secondary) ด้วย Hypervisor หรือทำงานร่วมกับ Backup Software',prereq:['มี VM OS Windows Server 2016 จำนวน 1 VM ที่มีข้อมูลทดสอบ เป็นไฟล์ Text ขนาด 5MB จำนวน 10 ไฟล์ และระบบตั้งค่ารองรับการทำ Replication และ Failover plan'],steps:['ตั้งค่าการ Replicate VM จาก Site A ไปยัง Site C','สั่ง Replicate VM และตรวจสอบสถานะการ Replicate','รอให้การ Replicate เสร็จสิ้น แล้ว Fail-over หรือ Power-on VM บน Site C ตามแผนที่สร้างไว้','ตรวจสอบสถานะและไฟล์ทดสอบบน VM','ทำการเพิ่มไฟล์ทดสอบ ขนาด 5MB จำนวน 5 ไฟล์ บน VM','ตั้งค่าการ Replicate VM จาก Site C ไปยัง Site A','สั่ง Replicate VM และตรวจสอบสถานะการ Replicate','Fail-back หรือ Power on VM บน Site A ตามแผนที่สร้างไว้','ตรวจสอบสถานะและข้อมูลบน VM ที่ทำการเพิ่มหรือแก้ไข'],expected:['Replicate VM ทั้งหมดสำเร็จและ Fail-over หรือ Power-on VM บน Site C ได้ตามแผนที่สร้างไว้ และ Replicate VM ทั้งหมดกลับไปยัง Site A สำเร็จ และ Fail-back Site หรือ Power-on VM บน Site A ได้ตามแผนที่สร้างไว้ โดยมีข้อมูลที่ถูกเพิ่มครบถ้วน'],indicators:['Replicate VM ทั้งหมด จาก Site A ไปยัง Site C สำเร็จ','Power-on VM บน Site A และ Site C สำเร็จ','VM ปลายทาง มีไฟล์ขนาดและจำนวนตรงกับ VM ต้นทาง']},
+    {id:'HP-011',name:'VM Migration from VMware',desc:'เพื่อทดสอบการย้าย VM จาก VMware Version 8 ไปยัง Hypervisor ที่ทดสอบ',prereq:['VM OS Windows Server 2016 และ VM OS Linux Ubuntu 20.04 ทำงานอยู่บน VMware vSphere Version 8 โดยมี ไฟล์ข้อมูลทดสอบขนาด 5 MB จำนวน 10 ไฟล์และ มี VMware Tools ติดตั้งอยู่ โดย VMware vSphere ถูกบริหารจัดการโดย VMware vCenter'],steps:['Migrate VM ทั้ง 2 VM จาก VMware vSphere ไปยัง Host 1 บน Site A','Power-on VM ทั้ง 2 VM และตรวจสอบสถานะของ VM','ติดตั้ง VM Tools ของ Hypervisor ที่ทดสอบบน VM'],expected:['VM ถูกย้ายมาทำงานที่ Host 1 และทำงานได้ปกติ','VM มีข้อมูลครบเหมือนก่อนการ Migrate และ Cut-off','สามารถติดตั้ง VM Tools ของ Hypervisor ที่ทดสอบบน VM ได้'],indicators:['VM ถูกย้ายมาทำงานที่ Host 1','VM ทำงานได้ปกติ มองเห็นและเรียกใช้งาน Virtual Device ได้ครบ','VM มีข้อมูลครบเหมือนก่อนการ Migrate และ Cut-off','สามารถติดตั้ง VM Tools ของ Hypervisor ที่ทดสอบบน VM ได้']},
+    {id:'HP-012',name:'VM Migration to VMware',desc:'เพื่อทดสอบความสามารถในการ ย้าย VM จาก Hypervisor ที่ทดสอบไปยัง VMware Version 8',prereq:['VM OS Windows Server 2016 และ VM OS Linux Ubuntu 20.04 ทำงานปกติ อยู่บน Hypervisor ที่ทดสอบ รวมทั้งมีไฟล์ข้อมูลทดสอบขนาด 5MB จำนวน 10 ไฟล์และ VMware Version 8'],steps:['ดำเนินการย้าย VM ทั้ง 2 VM ไปยัง VMware ปลายทาง','Power on VM','ตรวจสอบสถานะและข้อมูลบน VM'],expected:['VM ถูกย้ายมาทำงานที่ VMware และทำงานได้ปกติ','VM มีข้อมูลครบเหมือนก่อนการ Migrate และ Cut-off'],indicators:['VM ถูกย้ายมาทำงานที่ VMware','VM ทำงานได้ปกติ มองเห็นและเรียกใช้งาน Virtual Device ได้ครบ','VM มีข้อมูลครบเหมือนก่อนการ Migrate และ Cut-off']},
+    {id:'HP-013',name:'Affinity Rule',desc:'เพื่อทดสอบความสามารถในการกำหนดให้ VM ทำงานอยู่บน Host ใดๆ หรือกำหนดให้ VM ทำงานอยู่บน Host เดียวกัน หรือกำหนดให้ VM ห้ามทำงานอยู่บน Host เดียวกัน',prereq:['VM-1 ทำงานอยู่บน Host 1 และ VM-2 ทำงานอยู่บน Host 2 โดย VM ทั้ง 2 VM ถูกตั้งค่าให้ห้ามทำงานอยู่บน Host เดียวกัน และ Host 3,4,5 อยู่ในสถานะปกติ'],steps:['Power-off Host 1','ตรวจสอบสถานะของ VM-1'],expected:['VM-1 ถูก Restart ไปทำงานอยู่บน Host 3 และทำงานได้ปกติ'],indicators:['VM-1 ถูก Restart ไปทำงานอยู่บน Host 3 และทำงานได้ปกติ']},
+    {id:'HP-014',name:'Host and Cluster Centralized Management',desc:'เพื่อทดสอบความสามารถในการบริหารจัดการ Host และ Cluster ของระบบบริหารจัดการ และทดสอบความสามารถ High Availability ของระบบบริหารจัดการ',prereq:['ระบบบริหารจัดการอยู่ในสถานะปกติ สามารถบริหารจัดการ Host และ Cluster ทั้งหมดได้จากที่เดียว และระบบบริหารจัดการทำงาน High Availability แบบ Active-Active หรือ Active-Passive หรือเป็นแบบ Software as a Server (SaaS)'],steps:['เข้าใช้งานระบบริหารจัดการ เช่น ตรวจสอบสถานะหรือประสิทธิภาพของ Host และ Cluster','Power-off ระบบบริหารจัดการ (Active)','นำระบบบริหารจัดการสำรองขึ้นใช้งาน และตรวจสอบสถานะระบบบริหารจัดการสำรอง','เข้าใช้งานระบบริหารจัดการ เช่น ตรวจสอบสถานะหรือประสิทธิภาพของ Host และ Cluster'],expected:['ระบบบริหารจัดการสามารถใช้งานและเรียกดูข้อมูลของ Host และ Cluster ทั้งหมดได้จากที่เดียว','ระบบบริหารจัดการสามารถใช้งานได้ต่อเนื่อง หรือสามารถนำระบบบริหารจัดการสำรองขึ้นใช้งานได้'],indicators:['ระบบบริหารจัดการสามารถใช้งานและเรียกดูข้อมูลของ Host และ Cluster ทั้งหมดได้จากที่เดียว','ระบบบริหารจัดการสำรองขึ้นใช้งานได้ภายใน 60 นาที']},
+    {id:'HP-015',name:'VM High Availability',desc:'เพื่อทดสอบความสามารถแบบ High Availability ภายใน Cluster (Host/Node Failed)',prereq:['Host 1 และ Host 2 ใน Site A อยู่ในสถานะปกติ และเปิดการทำงานรองรับ High Availability โดยมี VM ทำงานอยู่บน Host 1 อย่างน้อย 1 VM โดยให้ VM เขียนไฟล์ Text ขนาด 1 MB ทุก 5 วินาที ที่มีชื่อไฟล์เป็น Timestamp'],steps:['Power-off Host 1','ตรวจสอบสถานะของ VM และไฟล์ที่อยู่บน VM ที่เคยทำงานอยู่บน Host 1'],expected:['เมื่อ Power-off Host 1 แล้ว VM ถูก Restart บน Host 2 หรือ 3 ได้ทันทีโดยอัตโนมัติ และไฟล์บน VM เหมือนกันกับก่อนที่จะ Power-off Host 1'],indicators:['VM ทั้งหมด Restart ได้โดยทันที (ไม่เกิน 5 นาที นับตั้งแต่สถานะ Host Power-off จนถึง VM Power-on)','มีจำนวนไฟล์บน VM เหมือนกันกับก่อนที่จะ Power-off (RPO=0)']}
+  ],
+  backup:[
+    {id:'BU-001',name:'VM Backup and Restore',desc:'เพื่อทดสอบความสามารถในการสำรองข้อมูลและกู้คืนข้อมูล VM แบบ Agentless',prereq:['VM OS Windows Server 2016 และ VM OS Linux Ubuntu 20.04 ทำงานปกติ จำนวน OS ละ 4 VM และมีไฟล์ Text ขนาด 5MB บน VM ทุก VM มีการตั้งค่าการสำรองข้อมูลให้พร้อมใช้งาน'],steps:['สำรองข้อมูล VM แบบ Full Backup','ตรวจสอบสถานะของ VM และสถานะของ Backup Job','กู้คืน VM ที่ได้สำรองข้อมูลไว้ และตรวจสอบสถานะของ Restore Job','Power-on และตรวจสอบสถานะ VM และไฟล์ Text บน VM'],expected:['การสำรองข้อมูล VM สำเร็จ','การกู้คืนข้อมูล VM สำเร็จและสามารถใช้งานได้ปกติ'],indicators:['VM ถูกสำรองข้อมูลสำเร็จทั้งหมด','VM ถูกกู้คืนข้อมูลสำเร็จทั้งหมด และไฟล์บน VM เหมือนกันกับสถานะก่อนถูกสำรองข้อมูล']},
+    {id:'BU-002',name:'File level Restore',desc:'เพื่อทดสอบความสามารถในการกู้คืนข้อมูลในระดับไฟล์',prereq:['VM OS Windows Server 2016 และ VM OS Linux Ubuntu 20.04 ทำงานปกติ VM มี ไฟล์ Text ขนาด 5MB บน VM และมีการตั้งค่าการสำรองข้อมูลให้พร้อมใช้งานโดยไม่ต้องติดตั้ง Backup Agent ล่วงหน้า'],steps:['สำรองข้อมูล VM','ตรวจสอบสถานะของ VM และสถานะของ Backup Job','ลบไฟล์ทดสอบบน VM','กู้คืนไฟล์ทดสอบที่ได้สำรองข้อมูลไว้ และตรวจสอบสถานะของ Restore Job','ตรวจสอบไฟล์ทดสอบ'],expected:['ไฟล์ทดสอบถูกกู้คืนสำเร็จ'],indicators:['ไฟล์ทดสอบถูกกู้คืนสำเร็จ']},
+    {id:'BU-003',name:'Application-level Backup and Restore',desc:'เพื่อทดสอบความสามารถในการสำรองข้อมูลและกู้คืนข้อมูลในระดับ Application (Database)',prereq:['Microsoft SQL Server 2025 ถูกติดตั้งอยู่บน VM และมีฐานข้อมูลทดสอบจำนวน 1 ฐานข้อมูล และมีการตั้งค่าการสำรองข้อมูลให้รองรับการสำรองข้อมูลในระดับ Application (Database)'],steps:['สำรองข้อมูล Microsoft SQL Server ในระดับ Application','ตรวจสอบสถานะของ VM และ สถานะของ Backup Job','ลบ Database ทดสอบ','กู้คืน Database และตรวจสอบสถานะของ Restore Job','ตรวจสอบ Database และข้อมูลบน Database ทดสอบของ Microsoft SQL Server'],expected:['ข้อมูลทดสอบสำหรับ Microsoft SQL Server ถูกกู้คืนสำเร็จ และมีข้อมูลที่ถูกต้องตามที่สำรองข้อมูลไว้','Microsoft SQL Server สามารถใช้งาน Database ได้ปกติ'],indicators:['Database ถูกสำรองข้อมูลและกู้คืนข้อมูลสำเร็จ','ข้อมูลใน Database ที่ถูกกู้คืนครบถ้วนเหมือนกับสถานะก่อนหน้าการสำรองข้อมูล']},
+    {id:'BU-004',name:'Incremental / Synthetic Full Backup',desc:'เพื่อทดสอบความสามารถในการสำรองข้อมูล VM แบบ Incremental Backup และการสร้าง Full Backup ใหม่จากข้อมูล Incremental Backup',prereq:['VM OS Windows Server 2016 และ VM OS Linux Ubuntu 20.04 ทำงานปกติ จำนวน OS ละ 4 VM โดยให้มีการเขียนไฟล์ Text ขนาด 5MB ทุกๆ 1 นาที และตั้งค่าระบบสำรองข้อมูลให้รองรับการสำรองข้อมูลแบบ Incremental หรือ Synthetic Full Backup โดยมีนโยบายการสำรองข้อมูลแบบ Incremental Backup 8 restore points และมีการสร้าง Full Backup ใหม่จากข้อมูล Incremental Backup อย่างน้อย 2 ครั้ง'],steps:['สำรองข้อมูล VM จำนวน 8 VM ตามนโยบายที่ตั้งค่าไว้ ให้มีการสร้าง Full Backup ใหม่จากข้อมูล Incremental Backup อย่างน้อย 2 ครั้ง','ตรวจสอบสถานะของ Backup Job และ Restore Point','กู้คืนข้อมูล VM ณ Restore Point ที่มีการสร้าง Full Backup ใหม่จากข้อมูล Incremental Backup','Power-on และตรวจสอบสถานะของ VM','กู้คืนข้อมูล VM ณ เวลาที่มีการทำ Incremental Backup','Power-on และตรวจสอบสถานะของ VM'],expected:['VM จำนวน 8 VM ถูกสำรองข้อมูลตามนโยบายที่ตั้งค่าไว้สำเร็จ โดยการสร้าง Full Backup จากข้อมูล Incremental Backup และ VM สามารถกู้คืนและใช้งานได้ปกติ'],indicators:['VM ถูกสำรองข้อมูลตามนโยบายที่ตั้งค่าไว้สำเร็จครบทุก VM','VM ถูกกู้คืนสำเร็จและมีข้อมูลตรงกับช่วงเวลาที่สำรองข้อมูลไป']}
+  ]
+};
+let selected=null,currentPart=null,currentCase=null,running=false;
+const STEP_STATUS_KEY='poc_step_status_v1';
+const STEP_STATUSES=[
+  {key:'pending',label:'PENDING'},
+  {key:'running',label:'RUNNING'},
+  {key:'done',label:'DONE'},
+  {key:'issue',label:'ISSUE'}
+];
+let stepStatusStore={};
+function nowTs(){return new Date().toLocaleTimeString('th-TH',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+function loadStepStatuses(){
+  try{stepStatusStore=JSON.parse(localStorage.getItem(STEP_STATUS_KEY)||'{}')||{};}
+  catch(e){stepStatusStore={};}
+}
+function saveStepStatuses(){
+  try{localStorage.setItem(STEP_STATUS_KEY,JSON.stringify(stepStatusStore));}catch(e){}
+}
+function caseKey(){
+  return currentPart&&currentCase?`${currentPart}:${currentCase.id}`:'';
+}
+function getCaseStepStatuses(){
+  const key=caseKey();
+  const count=currentCase?currentCase.steps.length:0;
+  const saved=key&&Array.isArray(stepStatusStore[key])?stepStatusStore[key]:[];
+  return Array.from({length:count},(_,i)=>saved[i]||'pending');
+}
+function setStepStatus(index,status){
+  if(!currentCase||!STEP_STATUSES.some(x=>x.key===status))return;
+  const key=caseKey();
+  const statuses=getCaseStepStatuses();
+  statuses[index]=status;
+  stepStatusStore[key]=statuses;
+  saveStepStatuses();
+  renderSteps();
+  updateCaseStatusFromSteps();
+  renderAnimation(index,status);
+}
+function resetCurrentStepStatuses(){
+  if(!currentCase)return;
+  stepStatusStore[caseKey()]=currentCase.steps.map(()=>'pending');
+  saveStepStatuses();
+  renderSteps();
+  renderAnimation();
+}
+function openResetAllModal(){document.getElementById('resetAllModal').classList.add('open');}
+function closeResetAllModal(){document.getElementById('resetAllModal').classList.remove('open');}
+function resetAllBackdrop(e){if(e.target.id==='resetAllModal')closeResetAllModal();}
+function resetAllStepStatuses(){
+  openResetAllModal();
+}
+function confirmResetAllStepStatuses(){
+  stepStatusStore={};
+  saveStepStatuses();
+  closeResetAllModal();
+  if(currentCase){
+    renderSteps();
+    updateCaseStatusFromSteps();
+    renderAnimation();
+    document.getElementById('eventLog').innerHTML=`<div class="le"><span class="lt">${nowTs()}</span><span class="lwn">All test procedure statuses reset.</span></div>`;
+    document.getElementById('resultBox').className='result-box';
+    document.getElementById('resultBox').innerHTML=`<b>${currentCase.id}: ${currentCase.name}</b><br><span style="color:var(--dim)">Expected Results:</span><br>${currentCase.expected.map(x=>`- ${x}`).join('<br>')}<br><div class="verdict" style="color:var(--warn)">&#9679; Waiting for simulation run</div>`;
+  }
+}
+function updateCaseStatusFromSteps(){
+  if(!currentCase||running)return;
+  const statuses=getCaseStepStatuses();
+  const el=document.getElementById('caseStatus');
+  const overall=getOverallStatus(statuses);
+  el.textContent=overall.label;
+  el.className=`status-pill ${overall.cls}`;
+}
+function renderSteps(){
+  if(!currentCase)return;
+  const statuses=getCaseStepStatuses();
+  document.getElementById('caseSteps').innerHTML=currentCase.steps.map((s,i)=>{
+    const st=statuses[i]||'pending';
+    const buttons=STEP_STATUSES.map(x=>`<button type="button" data-status="${x.key}" class="${st===x.key?'active':''}" onclick="setStepStatus(${i},'${x.key}')">${x.label}</button>`).join('');
+    return `<div class="step ${st==='pending'?'':st}"><div class="step-main"><span class="num">${String(i+1).padStart(2,'0')}</span><span class="step-text">${s}</span></div><div class="step-status" aria-label="Step ${i+1} status">${buttons}</div></div>`;
+  }).join('');
+}
+function animNode(title,subtitle='',vms=[]){
+  const vmHtml=vms.length?`<div class="anim-vms">${vms.map(x=>`<span class="anim-vm">${esc(x)}</span>`).join('')}</div>`:'';
+  return `<div class="anim-node"><b>${esc(title)}</b><span>${esc(subtitle)}</span>${vmHtml}</div>`;
+}
+function animSite(title,nodes=[],active=false){
+  return `<div class="anim-site ${active?'active':''}"><div class="anim-site-title">${esc(title)}</div>${nodes.join('')}</div>`;
+}
+function animMovers(labels){
+  return labels.map((x,i)=>`<span class="anim-vm move ${['','two','three','four'][i]||''}">${esc(x)}</span>`).join('');
+}
+function hpVmRects(vms,x,y,cols=2){
+  return vms.map((vm,i)=>{
+    const cx=x+(i%cols)*58;
+    const cy=y+Math.floor(i/cols)*34;
+    return `<g><rect class="hp-vm" x="${cx}" y="${cy}" width="48" height="24" rx="4"/><text class="hp-text hp-small" x="${cx+24}" y="${cy+16}" text-anchor="middle" fill="#00e5a0">${esc(vm)}</text></g>`;
+  }).join('');
+}
+function hpGhost(label,fromX,fromY,toX,toY,delay=0){
+  const dur='1.8s';
+  return `<g>
+    <rect class="hp-vm ghost" x="${fromX-24}" y="${fromY-12}" width="48" height="24" rx="4">
+      <animate attributeName="x" from="${fromX-24}" to="${toX-24}" dur="${dur}" begin="${delay}s" repeatCount="indefinite"/>
+      <animate attributeName="y" values="${fromY-12};${Math.min(fromY,toY)-74};${toY-12}" dur="${dur}" begin="${delay}s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.12;0.86;1" dur="${dur}" begin="${delay}s" repeatCount="indefinite"/>
+    </rect>
+    <text class="hp-text hp-small" x="${fromX}" y="${fromY+4}" text-anchor="middle" fill="#ff6b00">
+      <animate attributeName="x" from="${fromX}" to="${toX}" dur="${dur}" begin="${delay}s" repeatCount="indefinite"/>
+      <animate attributeName="y" values="${fromY+4};${Math.min(fromY,toY)-58};${toY+4}" dur="${dur}" begin="${delay}s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.12;0.86;1" dur="${dur}" begin="${delay}s" repeatCount="indefinite"/>
+      ${esc(label)}
+    </text>
+  </g>`;
+}
+function buildHp001Animation(stepIndex,status){
+  const statuses=getCaseStepStatuses();
+  const inspectStep=stepIndex!==null&&/ตรวจสอบสถานะของ VM/.test(currentCase.steps[stepIndex]||'');
+  const running=status==='running'&&!inspectStep;
+  const hasDone=i=>statuses[i]==='done'||(running&&stepIndex>i);
+  const migratingToB=running&&stepIndex===5;
+  let host1=['VM1','VM2','VM3','VM4','VM5','VM6','VM7','VM8'];
+  let host2=[];
+  let host4=[];
+  if(hasDone(5)){
+    host1=[];host2=[];host4=['VM1','VM2','VM3','VM4','VM5','VM6','VM7','VM8'];
+  }else if(hasDone(4)){
+    host1=[];host2=['VM1','VM2','VM3','VM4','VM5','VM6','VM7','VM8'];
+  }else if(hasDone(2)){
+    host1=['VM5','VM6','VM7','VM8'];host2=['VM1','VM2','VM3','VM4'];
+  }else if(hasDone(0)){
+    host1=['VM3','VM4','VM5','VM6','VM7','VM8'];host2=['VM1','VM2'];
+  }
+  const srcToHost2=running&&[0,2,4].includes(stepIndex);
+  const moving=stepIndex===2?['VM1','VM2','VM3','VM4']:stepIndex===4?['VM5','VM6','VM7','VM8']:migratingToB?['VM1','VM2','VM3','VM4','VM5','VM6','VM7','VM8']:['VM1','VM2'];
+  const ghosts=running?moving.slice(0,4).map((vm,i)=>{
+    const from=migratingToB?[315+(i%2)*58,212+Math.floor(i/2)*34]:[115+(i%2)*58,212+Math.floor(i/2)*34];
+    const to=migratingToB?[615+(i%2)*58,212+Math.floor(i/2)*34]:[315+(i%2)*58,212+Math.floor(i/2)*34];
+    return hpGhost(vm,from[0],from[1],to[0],to[1],i*.18);
+  }).join(''):'';
+  const path=running?`<path class="hp-path" marker-end="url(#hpArrow)" d="${migratingToB?'M340 224 C430 120 530 120 640 224':'M140 224 C190 150 260 150 340 224'}"><animate attributeName="stroke-dashoffset" from="40" to="0" dur="1s" repeatCount="indefinite"/></path>`:'';
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/>
+      </marker>
+    </defs>
+    <rect class="hp-site ${srcToHost2?'active':''}" x="20" y="46" width="500" height="330" rx="10"/>
+    <rect class="hp-site ${migratingToB?'active':''}" x="560" y="46" width="240" height="330" rx="10"/>
+    <text class="hp-text hp-label" x="38" y="76">Site A (DC)</text>
+    <text class="hp-text hp-label" x="578" y="76">Site B (MM)</text>
+    <rect class="hp-host ${srcToHost2?'active':''}" x="55" y="110" width="190" height="220" rx="8"/>
+    <rect class="hp-host ${srcToHost2?'active':''}" x="280" y="110" width="190" height="220" rx="8"/>
+    <rect class="hp-host ${migratingToB?'active':''}" x="595" y="110" width="170" height="220" rx="8"/>
+    <text class="hp-text" x="150" y="140" text-anchor="middle">Host 1</text>
+    <text class="hp-text" x="375" y="140" text-anchor="middle">Host 2</text>
+    <text class="hp-text" x="680" y="140" text-anchor="middle">Host 4</text>
+    <text class="hp-text hp-small" x="150" y="158" text-anchor="middle">${srcToHost2?'Source':'Workload source'}</text>
+    <text class="hp-text hp-small" x="375" y="158" text-anchor="middle">${migratingToB?'Cross-site source':'Migration target'}</text>
+    <text class="hp-text hp-small" x="680" y="158" text-anchor="middle">Site B target</text>
+    ${hpVmRects(host1,92,190)}
+    ${hpVmRects(host2,312,190)}
+    ${hpVmRects(host4,622,190)}
+    ${path}
+    ${ghosts}
+    ${inspectStep?'<text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="#ffcc00">Validation step: ตรวจสอบสถานะ VM ไม่มีการย้ายตำแหน่ง</text>':''}
+  </svg>`;
+}
+function hpPacket(fromX,fromY,toX,toY,label='PING',delay=0){
+  const dur='1.35s';
+  return `<g>
+    <circle r="5" fill="#3399ff" opacity="0">
+      <animate attributeName="cx" from="${fromX}" to="${toX}" dur="${dur}" begin="${delay}s" repeatCount="indefinite"/>
+      <animate attributeName="cy" from="${fromY}" to="${toY}" dur="${dur}" begin="${delay}s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.18;0.82;1" dur="${dur}" begin="${delay}s" repeatCount="indefinite"/>
+    </circle>
+    <text class="hp-text hp-small" x="${fromX}" y="${fromY-10}" text-anchor="middle" fill="#3399ff" opacity="0">
+      <animate attributeName="x" from="${fromX}" to="${toX}" dur="${dur}" begin="${delay}s" repeatCount="indefinite"/>
+      <animate attributeName="y" from="${fromY-10}" to="${toY-10}" dur="${dur}" begin="${delay}s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.18;0.82;1" dur="${dur}" begin="${delay}s" repeatCount="indefinite"/>
+      ${esc(label)}
+    </text>
+  </g>`;
+}
+function buildHp002Animation(stepIndex,status){
+  const statuses=getCaseStepStatuses();
+  const running=status==='running';
+  const migrated=statuses[1]==='done'||(running&&stepIndex>1);
+  const migrating=running&&stepIndex===1;
+  const pinging=statuses[0]==='running'||(running&&stepIndex===0);
+  const validating=stepIndex===2;
+  const diskVol1=migrated?[]:['VM Disk'];
+  const diskVol2=migrated?['VM Disk']:[];
+  const ghost=migrating?hpGhost('VMDK',190,286,570,286,0):'';
+  const pingPackets=pinging?[0,.3,.6].map(d=>hpPacket(705,95,262,172,'PING',d)).join(''):'';
+  const path=migrating?`<path class="hp-path" marker-end="url(#hpArrow)" d="M205 286 C310 210 450 210 570 286"><animate attributeName="stroke-dashoffset" from="40" to="0" dur="1s" repeatCount="indefinite"/></path>`:'';
+  const pingPath=pinging?`<path class="hp-path" marker-end="url(#hpArrow)" d="M690 105 C560 70 390 90 270 160"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".8s" repeatCount="indefinite"/></path>`:'';
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/>
+      </marker>
+    </defs>
+    <rect class="hp-site active" x="20" y="46" width="780" height="330" rx="10"/>
+    <text class="hp-text hp-label" x="38" y="76">Site A (DC)</text>
+    <rect class="hp-host ${pinging||validating?'active':''}" x="70" y="105" width="250" height="125" rx="8"/>
+    <rect class="hp-host ${migrating?'active':''}" x="70" y="255" width="250" height="86" rx="8"/>
+    <rect class="hp-host ${migrating?'active':''}" x="450" y="255" width="250" height="86" rx="8"/>
+    <rect class="hp-host ${pinging?'active':''}" x="620" y="82" width="120" height="68" rx="8"/>
+    <text class="hp-text" x="195" y="133" text-anchor="middle">Host 1</text>
+    <text class="hp-text hp-small" x="195" y="151" text-anchor="middle">VM is running here</text>
+    <text class="hp-text" x="195" y="282" text-anchor="middle">Storage Volume 1</text>
+    <text class="hp-text" x="575" y="282" text-anchor="middle">Storage Volume 2</text>
+    <text class="hp-text" x="680" y="111" text-anchor="middle">Tester</text>
+    <text class="hp-text hp-small" x="680" y="129" text-anchor="middle">ping -t</text>
+    <g>
+      <rect class="hp-vm" x="212" y="164" width="70" height="34" rx="5"/>
+      <text class="hp-text hp-small" x="247" y="185" text-anchor="middle" fill="#00e5a0">VM</text>
+    </g>
+    ${hpVmRects(diskVol1,166,302,1)}
+    ${hpVmRects(diskVol2,546,302,1)}
+    ${pingPath}
+    ${pingPackets}
+    ${path}
+    ${ghost}
+    ${validating?'<text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="#ffcc00">Validation step: ตรวจสอบ VM และยืนยัน disk อยู่บน Storage Volume ปลายทาง</text>':''}
+  </svg>`;
+}
+function hpIoPulse(x,y,label,delay=0,color='#00e5a0'){
+  const dur='1.45s';
+  return `<g>
+    <circle r="4" fill="${color}" opacity="0">
+      <animate attributeName="cx" values="${x};${x+72};${x}" dur="${dur}" begin="${delay}s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="${y};${y};${y}" dur="${dur}" begin="${delay}s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.18;0.82;1" dur="${dur}" begin="${delay}s" repeatCount="indefinite"/>
+    </circle>
+    <text class="hp-text hp-small" x="${x+36}" y="${y-10}" text-anchor="middle" fill="${color}" opacity="0">
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.18;0.82;1" dur="${dur}" begin="${delay}s" repeatCount="indefinite"/>
+      ${esc(label)}
+    </text>
+  </g>`;
+}
+function buildHp003Animation(stepIndex,status){
+  const running=status==='running';
+  const attaching=running&&stepIndex===0;
+  const validating=running&&stepIndex===1;
+  const attached=attaching||validating||getCaseStepStatuses()[0]==='done';
+  const attachPath=attaching?`<path class="hp-path" marker-end="url(#hpArrow)" d="M520 205 C455 130 345 130 282 180"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".9s" repeatCount="indefinite"/></path>`:'';
+  const readWrite=validating?[0,.28,.56].map((d,i)=>hpIoPulse(327,250,i%2?'WRITE':'READ',d,i%2?'#ffcc00':'#00e5a0')).join(''):'';
+  const ghost=attaching?hpGhost('USB',520,205,282,180,0):'';
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/>
+      </marker>
+    </defs>
+    <rect class="hp-site active" x="20" y="46" width="780" height="330" rx="10"/>
+    <text class="hp-text hp-label" x="38" y="76">Site A (DC)</text>
+    <rect class="hp-host ${attaching||validating?'active':''}" x="95" y="108" width="285" height="210" rx="8"/>
+    <rect class="hp-host ${attaching?'active':''}" x="500" y="145" width="190" height="145" rx="8"/>
+    <text class="hp-text" x="238" y="140" text-anchor="middle">Host 1</text>
+    <text class="hp-text hp-small" x="238" y="158" text-anchor="middle">USB passthrough enabled</text>
+    <text class="hp-text" x="595" y="178" text-anchor="middle">USB Device</text>
+    <text class="hp-text hp-small" x="595" y="196" text-anchor="middle">PDF / Text file >= 5MB</text>
+    <g>
+      <rect class="hp-vm" x="202" y="176" width="82" height="46" rx="6"/>
+      <text class="hp-text hp-small" x="243" y="202" text-anchor="middle" fill="#00e5a0">VM</text>
+    </g>
+    <g>
+      <rect class="hp-vm ${attached?'':'ghost'}" x="548" y="218" width="94" height="38" rx="6"/>
+      <text class="hp-text hp-small" x="595" y="242" text-anchor="middle" fill="${attached?'#00e5a0':'#ff6b00'}">USB FILE</text>
+    </g>
+    <rect class="hp-host ${validating?'active':''}" x="185" y="248" width="118" height="46" rx="7"/>
+    <text class="hp-text hp-small" x="244" y="276" text-anchor="middle" fill="${attached?'#00e5a0':'#6a7a9a'}">${attached?'Mounted USB':'Waiting USB'}</text>
+    ${attachPath}
+    ${ghost}
+    ${validating?'<path class="hp-path" marker-end="url(#hpArrow)" d="M300 268 H405"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".8s" repeatCount="indefinite"/></path>':''}
+    ${readWrite}
+    ${validating?'<text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="#ffcc00">Validation step: อ่านและเขียนไฟล์บน USB Device จาก VM</text>':''}
+  </svg>`;
+}
+function isInspectionStep(text=''){
+  return /ตรวจสอบ|validate|validation|check|สถานะ/.test(String(text).toLowerCase());
+}
+function buildHp005Animation(stepIndex,status){
+  const step=currentCase.steps[stepIndex]||'';
+  const inspect=isInspectionStep(step);
+  const running=status==='running'&&!inspect;
+  const statuses=getCaseStepStatuses();
+  const snapCreated=statuses[0]==='done'||stepIndex===0;
+  const fileDeleted=statuses[2]==='done'||stepIndex===2;
+  const reverted=statuses[3]==='done'||stepIndex===3;
+  const snapRemoved=statuses[5]==='done'||stepIndex===5;
+  const fileOk=reverted||!fileDeleted;
+  let action='',path='',ghost='';
+  if(running&&stepIndex===0){
+    action='Create Snapshot';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M250 166 C330 92 430 92 500 166"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".9s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('SNAP',250,166,500,166,0);
+  }else if(running&&stepIndex===2){
+    action='Delete Test File';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M210 226 C238 210 266 210 294 226"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".7s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('DELETE',210,238,294,238,0);
+  }else if(running&&stepIndex===3){
+    action='Revert Snapshot';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M500 166 C430 95 330 95 250 166"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".9s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('REVERT',500,166,250,166,0);
+  }else if(running&&stepIndex===5){
+    action='Delete Snapshot Chain';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M500 190 C540 245 610 250 640 210"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".9s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('REMOVE',500,190,640,210,0);
+  }else if(inspect){
+    action='Validation only - no animation';
+  }
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/></marker>
+      <filter id="vcGlow" x="-60%" y="-60%" width="220%" height="220%">
+        <feGaussianBlur stdDeviation="7" result="blur"/>
+        <feFlood flood-color="#00e5a0" flood-opacity=".95"/>
+        <feComposite in2="blur" operator="in"/>
+        <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <rect class="hp-site active" x="20" y="46" width="780" height="330" rx="10"/>
+    <text class="hp-text hp-label" x="38" y="76">VM Snapshot Lifecycle</text>
+    <rect class="hp-host ${running&&[0,2,3].includes(stepIndex)?'active':''}" x="95" y="112" width="230" height="190" rx="8"/>
+    <text class="hp-text" x="210" y="142" text-anchor="middle">Running VM</text>
+    <rect class="hp-vm" x="164" y="160" width="92" height="44" rx="6"/>
+    <text class="hp-text hp-small" x="210" y="186" text-anchor="middle" fill="#00e5a0">VM</text>
+    <rect class="hp-host ${fileOk?'active':''}" x="150" y="226" width="120" height="42" rx="7"/>
+    <text class="hp-text hp-small" x="210" y="252" text-anchor="middle" fill="${fileOk?'#00e5a0':'#ff3355'}">${fileOk?'Test File OK':'File Deleted'}</text>
+    <rect class="hp-host ${snapCreated&&!snapRemoved?'active':''}" x="430" y="112" width="190" height="115" rx="8"/>
+    <text class="hp-text" x="525" y="144" text-anchor="middle">Snapshot</text>
+    <text class="hp-text hp-small" x="525" y="166" text-anchor="middle" fill="${snapCreated&&!snapRemoved?'#00e5a0':'#6a7a9a'}">${snapRemoved?'Deleted':snapCreated?'Point-in-time copy':'Not created'}</text>
+    <circle cx="525" cy="190" r="${snapCreated&&!snapRemoved?'18':'12'}" fill="${snapCreated&&!snapRemoved?'rgba(0,229,160,.11)':'rgba(29,47,80,.45)'}" stroke="${snapCreated&&!snapRemoved?'#00e5a0':'#1d2f50'}"/>
+    <rect class="hp-host ${running&&stepIndex===5?'active':''}" x="620" y="178" width="116" height="72" rx="8"/>
+    <text class="hp-text hp-small" x="678" y="207" text-anchor="middle">Cleanup</text>
+    <text class="hp-text hp-small" x="678" y="226" text-anchor="middle" fill="${snapRemoved?'#00e5a0':'#6a7a9a'}">${snapRemoved?'No snapshot':'Pending'}</text>
+    ${path}
+    ${ghost}
+    <text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="${inspect?'#ffcc00':'#6a7a9a'}">${esc(action||'เลือก Step แล้วกด RUNNING เพื่อดู snapshot lifecycle')}</text>
+  </svg>`;
+}
+function buildHp006Animation(stepIndex,status){
+  const step=currentCase.steps[stepIndex]||'';
+  const inspect=isInspectionStep(step);
+  const running=status==='running'&&!inspect;
+  const statuses=getCaseStepStatuses();
+  const templateReady=statuses[0]==='done'||stepIndex===0;
+  const templateVmReady=statuses[1]==='done'||stepIndex===1||statuses[2]==='done';
+  const imageUploaded=statuses[3]==='done'||stepIndex===3;
+  const imageVmReady=statuses[3]==='done'||stepIndex===3||statuses[4]==='done';
+  let path='',ghost='',note='เลือก Step แล้วกด RUNNING เพื่อดู Template / Image workflow';
+  if(running&&stepIndex===0){
+    note='Create VM Template from source VM';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M190 150 C275 88 370 88 455 150"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".9s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('TEMPLATE',190,150,455,150,0);
+  }else if(running&&stepIndex===1){
+    note='Deploy VM from Template';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M455 175 C525 120 590 120 655 175"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".9s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('DEPLOY',455,175,655,175,0);
+  }else if(running&&stepIndex===3){
+    note='Upload Image File and Deploy VM';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M190 275 C310 338 540 338 655 275"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".9s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('IMAGE',190,275,655,275,0);
+  }else if(inspect){
+    note='Validation step: ไม่มี animation สำหรับขั้นตอนตรวจสอบ';
+  }
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/></marker></defs>
+    <rect class="hp-site active" x="20" y="46" width="780" height="330" rx="10"/>
+    <text class="hp-text hp-label" x="38" y="76">VM Template and Image Management</text>
+    <rect class="hp-host ${running&&stepIndex===0?'active':''}" x="80" y="112" width="220" height="104" rx="8"/>
+    <text class="hp-text" x="190" y="143" text-anchor="middle">Source VM</text>
+    <text class="hp-text hp-small" x="190" y="163" text-anchor="middle">Windows Server 2016 + IIS</text>
+    <rect class="hp-vm" x="153" y="176" width="74" height="28" rx="5"/>
+    <text class="hp-text hp-small" x="190" y="195" text-anchor="middle" fill="#00e5a0">VM</text>
+    <rect class="hp-host ${templateReady?'active':''}" x="374" y="112" width="162" height="104" rx="8"/>
+    <text class="hp-text" x="455" y="145" text-anchor="middle">VM Template</text>
+    <text class="hp-text hp-small" x="455" y="168" text-anchor="middle" fill="${templateReady?'#00e5a0':'#6a7a9a'}">${templateReady?'Ready':'Not created'}</text>
+    <rect class="hp-host ${running&&stepIndex===3?'active':''}" x="80" y="250" width="220" height="86" rx="8"/>
+    <text class="hp-text" x="190" y="281" text-anchor="middle">Image File</text>
+    <text class="hp-text hp-small" x="190" y="304" text-anchor="middle" fill="${imageUploaded?'#00e5a0':'#6a7a9a'}">${imageUploaded?'Uploaded':'OVA / OVF / QCOW2'}</text>
+    <rect class="hp-host ${running&&[1,3].includes(stepIndex)?'active':''}" x="585" y="132" width="160" height="184" rx="8"/>
+    <text class="hp-text" x="665" y="164" text-anchor="middle">Deployed VMs</text>
+    <rect class="hp-vm" x="625" y="188" width="82" height="34" rx="5" opacity="${templateVmReady?'1':'.28'}"/>
+    <text class="hp-text hp-small" x="666" y="210" text-anchor="middle" fill="${templateVmReady?'#00e5a0':'#6a7a9a'}">From Template</text>
+    <rect class="hp-vm" x="625" y="244" width="82" height="34" rx="5" opacity="${imageVmReady?'1':'.28'}"/>
+    <text class="hp-text hp-small" x="666" y="266" text-anchor="middle" fill="${imageVmReady?'#00e5a0':'#6a7a9a'}">From Image</text>
+    ${path}
+    ${ghost}
+    <text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="${inspect?'#ffcc00':'#6a7a9a'}">${esc(note)}</text>
+  </svg>`;
+}
+function osCard(label,x,y,ready=false,tools=false,blink=false){
+  return `<g>
+    <rect class="hp-vm ${blink?'hp-blink':''}" x="${x}" y="${y}" width="86" height="34" rx="5" opacity="${ready?'1':'.3'}"/>
+    <text class="hp-text hp-small" x="${x+43}" y="${y+21}" text-anchor="middle" fill="${ready?'#00e5a0':'#6a7a9a'}">${esc(label)}</text>
+    ${tools?`<circle cx="${x+78}" cy="${y+8}" r="6" fill="#3399ff"/><text class="hp-text hp-small" x="${x+78}" y="${y+11}" text-anchor="middle" fill="#fff">T</text>`:''}
+  </g>`;
+}
+function buildHp007Animation(stepIndex,status){
+  const step=currentCase.steps[stepIndex]||'';
+  const inspect=isInspectionStep(step);
+  const running=status==='running'&&!inspect;
+  const statuses=getCaseStepStatuses();
+  const created=statuses[0]==='done'||stepIndex===0;
+  const powered=statuses[1]==='done'||stepIndex===1||statuses[2]==='done'||statuses[3]==='done';
+  const toolsInstalled=statuses[2]==='done'||stepIndex===2;
+  const validating=inspect||stepIndex===3;
+  let path='',ghost='',note='เลือก Step แล้วกด RUNNING เพื่อดู OS support workflow';
+  if(running&&stepIndex===0){
+    note='Create multiple VMs from ISO images';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M190 154 C285 82 420 82 520 154"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".9s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('ISO',190,154,520,154,0);
+  }else if(running&&stepIndex===1){
+    note='Power-on all OS VMs - boot blink in progress';
+  }else if(running&&stepIndex===2){
+    note='Install VM Tools on each OS';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M190 278 C305 332 520 332 635 278"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".8s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('TOOLS',190,278,635,278,0);
+  }else if(validating){
+    note='Validation step: ตรวจสอบ OS matrix และ VM Tools ไม่มี animation';
+  }
+  const vmReady=created||powered||toolsInstalled||validating;
+  const oses=[
+    ['Ubuntu 24.04',402,132],['Debian 12',498,132],['RHEL 9',594,132],
+    ['SLES 15',402,178],['Windows 2016',498,178],['Windows 2025',594,178]
+  ].map(([l,x,y])=>osCard(l,x,y,vmReady,toolsInstalled,running&&stepIndex===1)).join('');
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/></marker></defs>
+    <rect class="hp-site active" x="20" y="46" width="780" height="330" rx="10"/>
+    <text class="hp-text hp-label" x="38" y="76">VM Operating System Support Matrix</text>
+    <rect class="hp-host ${running&&stepIndex===0?'active':''}" x="80" y="118" width="220" height="116" rx="8"/>
+    <text class="hp-text" x="190" y="149" text-anchor="middle">ISO Library</text>
+    <text class="hp-text hp-small" x="190" y="171" text-anchor="middle">Ubuntu / Debian / RHEL / SLES / Windows</text>
+    <rect class="hp-host ${running&&[0,1,2].includes(stepIndex)?'active':''}" x="370" y="104" width="340" height="150" rx="8"/>
+    <text class="hp-text" x="540" y="126" text-anchor="middle">Created OS VMs</text>
+    ${oses}
+    <rect class="hp-host ${running&&stepIndex===1?'active hp-blink':''}" x="610" y="282" width="126" height="56" rx="8"/>
+    <text class="hp-text hp-small" x="673" y="315" text-anchor="middle" fill="${powered?'#00e5a0':'#6a7a9a'}">${powered?'POWERED ON':'POWER OFF'}</text>
+    <rect class="hp-host ${running&&stepIndex===2?'active':''}" x="120" y="266" width="140" height="74" rx="8"/>
+    <text class="hp-text" x="190" y="298" text-anchor="middle">VM Tools</text>
+    <text class="hp-text hp-small" x="190" y="320" text-anchor="middle" fill="${toolsInstalled?'#00e5a0':'#6a7a9a'}">${toolsInstalled?'Installed':'Pending'}</text>
+    ${path}
+    ${ghost}
+    <text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="${validating?'#ffcc00':'#6a7a9a'}">${esc(note)}</text>
+  </svg>`;
+}
+function buildHp008Animation(stepIndex,status){
+  const step=currentCase.steps[stepIndex]||'';
+  const inspect=isInspectionStep(step);
+  const running=status==='running'&&!inspect;
+  const statuses=getCaseStepStatuses();
+  const pinging=statuses[0]==='running'||(running&&stepIndex===0);
+  const hotAdded=statuses[1]==='done'||stepIndex===1||statuses[2]==='done'||statuses[3]==='done'||statuses[4]==='done';
+  const diskReady=statuses[3]==='done'||stepIndex===3||statuses[4]==='done';
+  const wroteFile=statuses[4]==='done'||stepIndex===4;
+  let path='',ghost='',note='เลือก Step แล้วกด RUNNING เพื่อดู Hot Add workflow';
+  if(running&&stepIndex===1){
+    note='Hot-add: CPU 5-8 blink and vDisk2 50GB appears while VM stays online';
+  }else if(running&&stepIndex===3){
+    note='Mount and format vDisk2 50GB';
+  }else if(running&&stepIndex===4){
+    note='Write file on vDisk2 50GB';
+  }else if(inspect){
+    note='Validation step: ตรวจสอบจำนวน vCPU และ Disk ไม่มี animation';
+  }else if(pinging){
+    note='ping -t running while VM remains online';
+  }
+  const pingPath=pinging?`<path class="hp-path" marker-end="url(#hpArrow)" d="M690 105 C560 70 390 90 270 160"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".8s" repeatCount="indefinite"/></path>`:'';
+  const pingPackets=pinging?[0,.3,.6].map(d=>hpPacket(705,95,262,172,'PING',d)).join(''):'';
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/></marker></defs>
+    <rect class="hp-site active" x="20" y="46" width="780" height="330" rx="10"/>
+    <text class="hp-text hp-label" x="38" y="76">VM Resource Hot Add</text>
+    <rect class="hp-host ${pinging||hotAdded?'active':''}" x="85" y="96" width="430" height="220" rx="8"/>
+    <text class="hp-text" x="300" y="126" text-anchor="middle">Running VM</text>
+    <text class="hp-text hp-small" x="300" y="145" text-anchor="middle">4 vCPU + Disk 100GB baseline / No reboot during hot-add</text>
+    <rect class="hp-vm ${pinging?'hp-blink':''}" x="130" y="166" width="82" height="40" rx="6"/>
+    <text class="hp-text hp-small" x="171" y="190" text-anchor="middle" fill="#00e5a0">VM ONLINE</text>
+    <text class="hp-text hp-small" x="285" y="172" text-anchor="middle">vCPU</text>
+    ${[0,1,2,3].map(i=>`<rect class="hp-vm" x="${238+i*34}" y="182" width="26" height="24" rx="4"/><text class="hp-text hp-small" x="${251+i*34}" y="198" text-anchor="middle" fill="#00e5a0">${i+1}</text>`).join('')}
+    ${[0,1,2,3].map(i=>`<rect class="hp-vm ${running&&stepIndex===1?'hp-blink':''}" x="${238+i*34}" y="214" width="26" height="24" rx="4" opacity="${hotAdded?'1':'.18'}"/><text class="hp-text hp-small" x="${251+i*34}" y="230" text-anchor="middle" fill="${hotAdded?'#00e5a0':'#6a7a9a'}">${i+5}</text>`).join('')}
+    <text class="hp-text hp-small" x="432" y="172" text-anchor="middle">vDisk</text>
+    <rect class="hp-vm" x="386" y="184" width="92" height="28" rx="5"/>
+    <text class="hp-text hp-small" x="432" y="202" text-anchor="middle" fill="#00e5a0">Disk1 100GB</text>
+    <rect class="hp-vm ${running&&[1,3,4].includes(stepIndex)?'hp-blink':''}" x="386" y="224" width="92" height="28" rx="5" opacity="${hotAdded?'1':'.18'}"/>
+    <text class="hp-text hp-small" x="432" y="242" text-anchor="middle" fill="${hotAdded?'#00e5a0':'#6a7a9a'}">vDisk2 50GB</text>
+    <rect class="hp-host ${running&&stepIndex===1?'active':''}" x="560" y="150" width="160" height="82" rx="8"/>
+    <text class="hp-text" x="640" y="182" text-anchor="middle">Hot Add</text>
+    <text class="hp-text hp-small" x="640" y="204" text-anchor="middle">+4 vCPU + vDisk2</text>
+    ${running&&stepIndex===1?'<path class="hp-path" marker-end="url(#hpArrow)" d="M560 190 C520 158 485 158 454 222"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".8s" repeatCount="indefinite"/></path><path class="hp-path" marker-end="url(#hpArrow)" d="M560 190 C500 120 385 124 325 214"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".8s" repeatCount="indefinite"/></path>':''}
+    <rect class="hp-host ${diskReady?'active':''}" x="330" y="285" width="180" height="58" rx="8"/>
+    <text class="hp-text hp-small" x="420" y="309" text-anchor="middle" fill="${diskReady?'#00e5a0':'#6a7a9a'}">${diskReady?'Mounted + Formatted':'Mount / Format'}</text>
+    <text class="hp-text hp-small" x="420" y="328" text-anchor="middle" fill="${wroteFile?'#00e5a0':'#6a7a9a'}">${wroteFile?'File Write OK':'Write test pending'}</text>
+    <rect class="hp-host ${pinging?'active':''}" x="620" y="82" width="120" height="68" rx="8"/>
+    <text class="hp-text" x="680" y="111" text-anchor="middle">Tester</text>
+    <text class="hp-text hp-small" x="680" y="129" text-anchor="middle">ping -t</text>
+    ${pingPath}
+    ${pingPackets}
+    ${path}
+    ${ghost}
+    <text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="${inspect?'#ffcc00':'#6a7a9a'}">${esc(note)}</text>
+  </svg>`;
+}
+function capBar(label,x,y,width,usedPct,limitPct=62,blink=false,color='#00e5a0'){
+  const used=Math.min(width,Math.max(0,width*usedPct));
+  const limitX=x+width*limitPct;
+  return `<g>
+    <text class="hp-text hp-small" x="${x}" y="${y-8}">${esc(label)}</text>
+    <rect x="${x}" y="${y}" width="${width}" height="24" rx="5" fill="rgba(16,26,46,.85)" stroke="rgba(29,47,80,.95)"/>
+    <rect class="${blink?'hp-blink':''}" x="${x}" y="${y}" width="${used}" height="24" rx="5" fill="${color}" opacity=".82"/>
+    <line x1="${limitX}" y1="${y-6}" x2="${limitX}" y2="${y+30}" stroke="#ffcc00" stroke-width="2" stroke-dasharray="4 3"/>
+    <text class="hp-text hp-small" x="${limitX}" y="${y+44}" text-anchor="middle" fill="#ffcc00">Physical limit</text>
+  </g>`;
+}
+function buildHp009Animation(stepIndex,status){
+  const step=currentCase.steps[stepIndex]||'';
+  const inspect=isInspectionStep(step);
+  const running=status==='running'&&!inspect;
+  const statuses=getCaseStepStatuses();
+  const vmCreated=statuses[0]==='done'||stepIndex===0||statuses[1]==='done'||statuses[2]==='done'||statuses[3]==='done';
+  const vmPowered=statuses[1]==='done'||stepIndex===1||statuses[3]==='done'||statuses[6]==='done';
+  const memIncreased=statuses[5]==='done'||stepIndex===5||statuses[6]==='done'||statuses[7]==='done';
+  const memoryPowered=statuses[6]==='done'||stepIndex===6||statuses[7]==='done';
+  let path='',ghost='',note='เลือก Step แล้วกด RUNNING เพื่อดู CPU/Memory Overcommit';
+  if(running&&stepIndex===0){
+    note='Create VM with vCPU allocation above physical cores';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M190 270 C300 205 430 205 540 270"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".9s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('vCPU VM',190,270,540,270,0);
+  }else if(running&&stepIndex===1){
+    note='Power-on VM despite vCPU overcommit';
+  }else if(running&&stepIndex===3){
+    note='I/O test confirms VM remains usable';
+    ghost=hpGhost('I/O',540,270,670,270,0);
+  }else if(running&&stepIndex===4){
+    note='Shutdown VM before memory overcommit change';
+  }else if(running&&stepIndex===5){
+    note='Increase VM memory above physical host memory';
+  }else if(running&&stepIndex===6){
+    note='Power-on VM after memory overcommit';
+  }else if(inspect){
+    note='Validation step: ตรวจสอบจำนวน Resource ไม่มี animation';
+  }
+  const cpuBlink=running&&[0,1].includes(stepIndex);
+  const memBlink=running&&[5,6].includes(stepIndex);
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/></marker></defs>
+    <rect class="hp-site active" x="20" y="46" width="780" height="330" rx="10"/>
+    <text class="hp-text hp-label" x="38" y="76">VM CPU and Memory Overcommitting</text>
+    <rect class="hp-host active" x="70" y="112" width="285" height="190" rx="8"/>
+    <text class="hp-text" x="212" y="142" text-anchor="middle">Host 1 Physical Capacity</text>
+    ${capBar('CPU cores',105,176,215,.62,.62,false,'#3399ff')}
+    ${capBar('Memory',105,248,215,.62,.62,false,'#a855f7')}
+    <rect class="hp-host ${vmCreated||memIncreased?'active':''}" x="450" y="112" width="285" height="190" rx="8"/>
+    <text class="hp-text" x="592" y="142" text-anchor="middle">VM Allocation</text>
+    ${capBar(vmCreated?'vCPU allocated > physical':'vCPU pending',485,176,215,vmCreated?.96:.32,.62,cpuBlink,'#00e5a0')}
+    ${capBar(memIncreased?'Memory allocated > physical':'Memory baseline',485,248,215,memIncreased?.98:.42,.62,memBlink,'#ff6b00')}
+    <rect class="hp-host ${running&&[1,6].includes(stepIndex)?'active hp-blink':''}" x="120" y="318" width="150" height="44" rx="8"/>
+    <text class="hp-text hp-small" x="195" y="345" text-anchor="middle" fill="${vmPowered||memoryPowered?'#00e5a0':'#6a7a9a'}">${vmPowered||memoryPowered?'POWER-ON OK':'POWER-OFF'}</text>
+    <rect class="hp-host ${running&&stepIndex===3?'active':''}" x="560" y="318" width="150" height="44" rx="8"/>
+    <text class="hp-text hp-small" x="635" y="345" text-anchor="middle" fill="${statuses[3]==='done'||stepIndex===3?'#00e5a0':'#6a7a9a'}">I/O TEST</text>
+    ${path}
+    ${ghost}
+    <text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="${inspect?'#ffcc00':'#6a7a9a'}">${esc(note)}</text>
+  </svg>`;
+}
+function fileStack(x,y,count,label,color='#00e5a0'){
+  return Array.from({length:count},(_,i)=>`<rect x="${x+i*7}" y="${y+i*5}" width="54" height="28" rx="4" fill="rgba(16,26,46,.9)" stroke="${color}" opacity=".9"/>`).join('')+
+    `<text class="hp-text hp-small" x="${x+44}" y="${y+count*5+42}" text-anchor="middle" fill="${color}">${esc(label)}</text>`;
+}
+function buildHp010Animation(stepIndex,status){
+  const step=currentCase.steps[stepIndex]||'';
+  const inspect=isInspectionStep(step)&&![1,6].includes(stepIndex);
+  const running=status==='running'&&!inspect;
+  const statuses=getCaseStepStatuses();
+  const replicatedToDr=statuses[1]==='done'||statuses[2]==='done'||statuses[3]==='done'||stepIndex>=1;
+  const drPowered=statuses[2]==='done'||statuses[3]==='done'||stepIndex===2;
+  const addedFiles=statuses[4]==='done'||stepIndex===4;
+  const reverseConfigured=statuses[5]==='done'||stepIndex>=5;
+  const replicatedBack=statuses[6]==='done'||statuses[7]==='done'||statuses[8]==='done'||stepIndex>=6;
+  const siteAPoweredBack=statuses[7]==='done'||statuses[8]==='done'||stepIndex===7;
+  let path='',ghost='',note='เลือก Step แล้วกด RUNNING เพื่อดู Replication / Failover workflow';
+  const aX=205,aY=194,cX=612,cY=194;
+  if(running&&[0,1].includes(stepIndex)){
+    note=stepIndex===0?'Configure replication Site A -> Site C':'Replicating VM from Site A to Site C';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M270 194 C370 112 485 112 570 194"><animate attributeName="stroke-dashoffset" from="44" to="0" dur=".85s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost(stepIndex===0?'PLAN':'SYNC',aX,aY,cX,cY,0);
+  }else if(running&&stepIndex===2){
+    note='Fail-over / Power-on VM at Site C';
+  }else if(running&&stepIndex===4){
+    note='Add 5 new files to workload before reverse replication';
+  }else if(running&&[5,6].includes(stepIndex)){
+    note=stepIndex===5?'Configure reverse replication Site C -> Site A':'Replicating changed data back to Site A';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M570 234 C480 318 360 318 270 234"><animate attributeName="stroke-dashoffset" from="44" to="0" dur=".85s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost(stepIndex===5?'REVERSE':'SYNC BACK',cX,cY,aX,aY,0);
+  }else if(running&&stepIndex===7){
+    note='Fail-back / Power-on VM at Site A';
+  }else if(inspect){
+    note='Validation step: ตรวจสอบไฟล์และสถานะ VM ไม่มี animation';
+  }
+  const drBlink=running&&stepIndex===2;
+  const aBlink=running&&stepIndex===7;
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/></marker></defs>
+    <rect class="hp-site ${running&&[1,7].includes(stepIndex)?'active':''}" x="42" y="68" width="300" height="280" rx="10"/>
+    <rect class="hp-site ${running&&[2,4,5,6].includes(stepIndex)?'active':''}" x="478" y="68" width="300" height="280" rx="10"/>
+    <text class="hp-text hp-label" x="62" y="98">Site A (Primary)</text>
+    <text class="hp-text hp-label" x="498" y="98">Site C (DR)</text>
+    <rect class="hp-host ${aBlink?'active hp-blink':''}" x="120" y="128" width="170" height="120" rx="8"/>
+    <text class="hp-text" x="205" y="158" text-anchor="middle">Primary VM</text>
+    <text class="hp-text hp-small" x="205" y="178" text-anchor="middle" fill="${siteAPoweredBack?'#00e5a0':'#8a9aba'}">${siteAPoweredBack?'Fail-back Online':'Source Workload'}</text>
+    <rect class="hp-vm ${aBlink?'hp-blink':''}" x="170" y="194" width="70" height="34" rx="6"/>
+    <text class="hp-text hp-small" x="205" y="216" text-anchor="middle" fill="#00e5a0">VM</text>
+    <g opacity="${replicatedBack||siteAPoweredBack?'1':'.35'}">${fileStack(150,266,addedFiles?4:3,addedFiles?'+5 files':'10 files',replicatedBack?'#00e5a0':'#6a7a9a')}</g>
+    <rect class="hp-host ${drBlink?'active hp-blink':''}" x="528" y="128" width="170" height="120" rx="8"/>
+    <text class="hp-text" x="613" y="158" text-anchor="middle">DR VM</text>
+    <text class="hp-text hp-small" x="613" y="178" text-anchor="middle" fill="${drPowered?'#00e5a0':replicatedToDr?'#ffcc00':'#6a7a9a'}">${drPowered?'Powered on at DR':replicatedToDr?'Replica Ready':'Waiting Replica'}</text>
+    <rect class="hp-vm ${drBlink?'hp-blink':''}" x="578" y="194" width="70" height="34" rx="6" opacity="${replicatedToDr?'1':'.28'}"/>
+    <text class="hp-text hp-small" x="613" y="216" text-anchor="middle" fill="${replicatedToDr?'#00e5a0':'#6a7a9a'}">VM</text>
+    <g opacity="${replicatedToDr?'1':'.25'}">${fileStack(558,266,addedFiles?4:3,addedFiles?'+5 files':'10 files',addedFiles?'#ffcc00':'#00e5a0')}</g>
+    <rect class="hp-host ${running&&[0,5].includes(stepIndex)?'active':''}" x="342" y="78" width="136" height="58" rx="8"/>
+    <text class="hp-text hp-small" x="410" y="112" text-anchor="middle">${reverseConfigured?'Reverse Plan':'Failover Plan'}</text>
+    <rect class="hp-host ${running&&[1,6].includes(stepIndex)?'active hp-blink':''}" x="342" y="280" width="136" height="58" rx="8"/>
+    <text class="hp-text hp-small" x="410" y="314" text-anchor="middle">${running&&stepIndex===6?'Sync Back':'Replication'}</text>
+    ${path}
+    ${ghost}
+    <text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="${inspect?'#ffcc00':'#6a7a9a'}">${esc(note)}</text>
+  </svg>`;
+}
+function buildHp011Animation(stepIndex,status){
+  const step=currentCase.steps[stepIndex]||'';
+  const inspect=isInspectionStep(step)&&stepIndex!==1;
+  const running=status==='running'&&!inspect;
+  const statuses=getCaseStepStatuses();
+  const migrated=statuses[0]==='done'||stepIndex===0||statuses[1]==='done'||statuses[2]==='done';
+  const powered=statuses[1]==='done'||stepIndex===1||statuses[2]==='done';
+  const tools=statuses[2]==='done'||stepIndex===2;
+  let path='',ghost='',note='เลือก Step แล้วกด RUNNING เพื่อดู VMware migration';
+  if(running&&stepIndex===0){
+    note='Migrate 2 VMs from Old Cluster to Host 1 at Site A';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M250 205 C370 95 500 95 615 205"><animate attributeName="stroke-dashoffset" from="48" to="0" dur=".85s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('2 VMs',250,205,615,205,0);
+  }else if(running&&stepIndex===1){
+    note='Power-on migrated Windows / Linux VMs at Site A';
+  }else if(running&&stepIndex===2){
+    note='Install target Hypervisor VM Tools';
+  }else if(inspect){
+    note='Validation step: ตรวจสอบสถานะ VM ไม่มี animation';
+  }
+  const ghosts=running&&stepIndex===0
+    ? hpGhost('WIN',230,185,595,185,0)+hpGhost('LINUX',270,230,635,230,.22)
+    : '';
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/></marker></defs>
+    <rect class="hp-site ${running&&stepIndex===0?'active':''}" x="40" y="66" width="300" height="286" rx="10"/>
+    <rect class="hp-site ${running&&[0,1,2].includes(stepIndex)?'active':''}" x="480" y="66" width="300" height="286" rx="10"/>
+    <text class="hp-text hp-label" x="60" y="96">Old Cluster / VMware vSphere 8</text>
+    <text class="hp-text hp-label" x="500" y="96">Site A (DC) / New Cluster</text>
+    <rect class="hp-host ${running&&stepIndex===0?'active':''}" x="92" y="122" width="198" height="172" rx="8"/>
+    <text class="hp-text" x="191" y="152" text-anchor="middle">VMware vCenter</text>
+    <text class="hp-text hp-small" x="191" y="172" text-anchor="middle">Old Cluster source</text>
+    <g opacity="${migrated?'.25':'1'}">
+      <rect class="hp-vm" x="142" y="192" width="98" height="34" rx="5"/>
+      <text class="hp-text hp-small" x="191" y="214" text-anchor="middle" fill="#00e5a0">Windows VM</text>
+      <rect class="hp-vm" x="142" y="238" width="98" height="34" rx="5"/>
+      <text class="hp-text hp-small" x="191" y="260" text-anchor="middle" fill="#00e5a0">Linux VM</text>
+    </g>
+    <rect class="hp-host ${running&&[0,1,2].includes(stepIndex)?'active':''}" x="548" y="122" width="198" height="172" rx="8"/>
+    <text class="hp-text" x="647" y="152" text-anchor="middle">Host 1</text>
+    <text class="hp-text hp-small" x="647" y="172" text-anchor="middle">Migration target</text>
+    <g opacity="${migrated?'1':'.22'}">
+      <rect class="hp-vm ${running&&stepIndex===1?'hp-blink':''}" x="598" y="192" width="98" height="34" rx="5"/>
+      <text class="hp-text hp-small" x="647" y="214" text-anchor="middle" fill="${powered?'#00e5a0':'#6a7a9a'}">Windows VM</text>
+      <rect class="hp-vm ${running&&stepIndex===1?'hp-blink':''}" x="598" y="238" width="98" height="34" rx="5"/>
+      <text class="hp-text hp-small" x="647" y="260" text-anchor="middle" fill="${powered?'#00e5a0':'#6a7a9a'}">Linux VM</text>
+    </g>
+    <rect class="hp-host ${running&&stepIndex===2?'active hp-blink':''}" x="548" y="306" width="198" height="42" rx="8"/>
+    <text class="hp-text hp-small" x="647" y="332" text-anchor="middle" fill="${tools?'#00e5a0':'#6a7a9a'}">${tools?'Target VM Tools Installed':'Install Target VM Tools'}</text>
+    ${path}
+    ${ghosts||ghost}
+    <text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="${inspect?'#ffcc00':'#6a7a9a'}">${esc(note)}</text>
+  </svg>`;
+}
+function buildHp012Animation(stepIndex,status){
+  const step=currentCase.steps[stepIndex]||'';
+  const inspect=isInspectionStep(step);
+  const running=status==='running'&&!inspect;
+  const statuses=getCaseStepStatuses();
+  const migrated=statuses[0]==='done'||stepIndex===0||statuses[1]==='done'||statuses[2]==='done';
+  const powered=statuses[1]==='done'||stepIndex===1;
+  let path='',ghosts='',note='เลือก Step แล้วกด RUNNING เพื่อดู migration กลับ VMware';
+  if(running&&stepIndex===0){
+    note='Migrate 2 VMs from Site A back to Old Cluster / VMware';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M615 205 C500 95 370 95 250 205"><animate attributeName="stroke-dashoffset" from="48" to="0" dur=".85s" repeatCount="indefinite"/></path>';
+    ghosts=hpGhost('WIN',595,185,230,185,0)+hpGhost('LINUX',635,230,270,230,.22);
+  }else if(running&&stepIndex===1){
+    note='Power-on migrated VMs on VMware target';
+  }else if(inspect){
+    note='Validation step: ตรวจสอบสถานะและข้อมูลบน VM ไม่มี animation';
+  }
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/></marker></defs>
+    <rect class="hp-site ${running&&[0,1].includes(stepIndex)?'active':''}" x="40" y="66" width="300" height="286" rx="10"/>
+    <rect class="hp-site ${running&&stepIndex===0?'active':''}" x="480" y="66" width="300" height="286" rx="10"/>
+    <text class="hp-text hp-label" x="60" y="96">Old Cluster / VMware vSphere 8</text>
+    <text class="hp-text hp-label" x="500" y="96">Site A (DC) / Hypervisor</text>
+    <rect class="hp-host ${running&&[0,1].includes(stepIndex)?'active':''}" x="92" y="122" width="198" height="172" rx="8"/>
+    <text class="hp-text" x="191" y="152" text-anchor="middle">VMware Target</text>
+    <text class="hp-text hp-small" x="191" y="172" text-anchor="middle">Old Cluster</text>
+    <g opacity="${migrated?'1':'.22'}">
+      <rect class="hp-vm ${running&&stepIndex===1?'hp-blink':''}" x="142" y="192" width="98" height="34" rx="5"/>
+      <text class="hp-text hp-small" x="191" y="214" text-anchor="middle" fill="${powered?'#00e5a0':'#6a7a9a'}">Windows VM</text>
+      <rect class="hp-vm ${running&&stepIndex===1?'hp-blink':''}" x="142" y="238" width="98" height="34" rx="5"/>
+      <text class="hp-text hp-small" x="191" y="260" text-anchor="middle" fill="${powered?'#00e5a0':'#6a7a9a'}">Linux VM</text>
+    </g>
+    <rect class="hp-host ${running&&stepIndex===0?'active':''}" x="548" y="122" width="198" height="172" rx="8"/>
+    <text class="hp-text" x="647" y="152" text-anchor="middle">Hypervisor VM</text>
+    <text class="hp-text hp-small" x="647" y="172" text-anchor="middle">Site A source</text>
+    <g opacity="${migrated?'.25':'1'}">
+      <rect class="hp-vm" x="598" y="192" width="98" height="34" rx="5"/>
+      <text class="hp-text hp-small" x="647" y="214" text-anchor="middle" fill="#00e5a0">Windows VM</text>
+      <rect class="hp-vm" x="598" y="238" width="98" height="34" rx="5"/>
+      <text class="hp-text hp-small" x="647" y="260" text-anchor="middle" fill="#00e5a0">Linux VM</text>
+    </g>
+    ${path}
+    ${ghosts}
+    <text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="${inspect?'#ffcc00':'#6a7a9a'}">${esc(note)}</text>
+  </svg>`;
+}
+function buildHp013Animation(stepIndex,status){
+  const step=currentCase.steps[stepIndex]||'';
+  const inspect=isInspectionStep(step);
+  const running=status==='running'&&!inspect;
+  const statuses=getCaseStepStatuses();
+  const moved=statuses[0]==='done'||stepIndex===0||statuses[1]==='done';
+  const vm1OnHost3=moved;
+  let path='',ghost='',note='Anti-affinity rule keeps VM-1 and VM-2 on separate hosts';
+  if(running&&stepIndex===0){
+    note='Host 1 power-off: VM-1 restarts on Host 3 to preserve anti-affinity';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M170 214 C285 95 470 95 602 214"><animate attributeName="stroke-dashoffset" from="44" to="0" dur=".85s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('VM-1',170,214,602,214,0);
+  }else if(inspect){
+    note='Validation step: ตรวจสอบ VM-1 บน Host 3 ไม่มี animation';
+  }
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/></marker></defs>
+    <rect class="hp-site active" x="20" y="46" width="780" height="330" rx="10"/>
+    <text class="hp-text hp-label" x="38" y="76">Affinity / Anti-affinity Rule</text>
+    <rect class="hp-host ${running&&stepIndex===0?'active hp-blink':''}" x="70" y="120" width="180" height="150" rx="8" opacity="${moved?'.45':'1'}"/>
+    <text class="hp-text" x="160" y="150" text-anchor="middle">Host 1</text>
+    <text class="hp-text hp-small" x="160" y="171" text-anchor="middle" fill="${moved?'#ff3355':'#00e5a0'}">${moved?'POWER OFF':'VM-1 source'}</text>
+    <g opacity="${moved?'.18':'1'}">
+      <rect class="hp-vm" x="122" y="198" width="76" height="34" rx="5"/>
+      <text class="hp-text hp-small" x="160" y="220" text-anchor="middle" fill="#00e5a0">VM-1</text>
+    </g>
+    <rect class="hp-host" x="320" y="120" width="180" height="150" rx="8"/>
+    <text class="hp-text" x="410" y="150" text-anchor="middle">Host 2</text>
+    <text class="hp-text hp-small" x="410" y="171" text-anchor="middle">VM-2 active</text>
+    <rect class="hp-vm" x="372" y="198" width="76" height="34" rx="5"/>
+    <text class="hp-text hp-small" x="410" y="220" text-anchor="middle" fill="#00e5a0">VM-2</text>
+    <rect class="hp-host ${running&&stepIndex===0?'active':''}" x="570" y="120" width="180" height="150" rx="8"/>
+    <text class="hp-text" x="660" y="150" text-anchor="middle">Host 3</text>
+    <text class="hp-text hp-small" x="660" y="171" text-anchor="middle" fill="${vm1OnHost3?'#00e5a0':'#6a7a9a'}">${vm1OnHost3?'Restart target':'Available target'}</text>
+    <g opacity="${vm1OnHost3?'1':'.18'}">
+      <rect class="hp-vm ${running&&stepIndex===0?'hp-blink':''}" x="622" y="198" width="76" height="34" rx="5"/>
+      <text class="hp-text hp-small" x="660" y="220" text-anchor="middle" fill="${vm1OnHost3?'#00e5a0':'#6a7a9a'}">VM-1</text>
+    </g>
+    <rect class="hp-host active" x="254" y="302" width="312" height="42" rx="8"/>
+    <text class="hp-text hp-small" x="410" y="328" text-anchor="middle" fill="#ffcc00">Anti-affinity: VM-1 and VM-2 must not run on same host</text>
+    ${path}
+    ${ghost}
+    <text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="${inspect?'#ffcc00':'#6a7a9a'}">${esc(note)}</text>
+  </svg>`;
+}
+function buildHp014Animation(stepIndex,status){
+  const step=currentCase.steps[stepIndex]||'';
+  const inspect=isInspectionStep(step)&&![0,2,3].includes(stepIndex);
+  const running=status==='running'&&!inspect;
+  const statuses=getCaseStepStatuses();
+  const activeDown=statuses[1]==='done'||stepIndex===1||statuses[2]==='done'||statuses[3]==='done';
+  const passiveActive=statuses[2]==='done'||stepIndex===2||statuses[3]==='done';
+  let path='',ghost='',note='vCenter redundancy in New Cluster';
+  if(running&&stepIndex===0){
+    note='Access Active vCenter and view Host / Cluster inventory';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M245 165 C335 105 475 105 575 165"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".9s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('MGMT',245,165,575,165,0);
+  }else if(running&&stepIndex===1){
+    note='Power-off Active vCenter';
+  }else if(running&&stepIndex===2){
+    note='Passive vCenter power on / takeover';
+  }else if(running&&stepIndex===3){
+    note='Access management again through standby/active vCenter';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M245 250 C335 310 475 310 575 205"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".9s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('MGMT OK',245,250,575,205,0);
+  }else if(inspect){
+    note='Validation step: ตรวจสอบ vCenter redundancy ไม่มี animation';
+  }
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/></marker></defs>
+    <rect class="hp-site active" x="40" y="58" width="740" height="310" rx="10"/>
+    <text class="hp-text hp-label" x="60" y="88">New Cluster - vCenter Redundancy</text>
+    <rect class="hp-host ${running&&[0,1].includes(stepIndex)?'active':''}" x="95" y="122" width="225" height="94" rx="8" opacity="${running&&stepIndex===2?'.18':activeDown?'.38':'1'}"/>
+    <text class="hp-text" x="207" y="154" text-anchor="middle">Active vCenter</text>
+    <text class="hp-text hp-small" x="207" y="176" text-anchor="middle" fill="${activeDown?'#ff3355':'#00e5a0'}">${activeDown?'POWER OFF':'Primary Management'}</text>
+    ${activeDown?'<line x1="120" y1="136" x2="295" y2="202" stroke="#ff3355" stroke-width="3" opacity=".85"/><line x1="295" y1="136" x2="120" y2="202" stroke="#ff3355" stroke-width="3" opacity=".85"/><text class="hp-text hp-small hp-blink" x="207" y="204" text-anchor="middle" fill="#ff3355">OFFLINE</text>':''}
+    <rect class="hp-host ${running&&stepIndex===2?'hp-spotlight':running&&stepIndex===3?'active':''}" x="95" y="238" width="225" height="94" rx="8" ${running&&stepIndex===2?'filter="url(#vcGlow)"':''}/>
+    <text class="hp-text" x="207" y="270" text-anchor="middle">${passiveActive?'Promoted vCenter':'Passive vCenter'}</text>
+    <text class="hp-text hp-small ${running&&stepIndex===2?'hp-blink':''}" x="207" y="292" text-anchor="middle" fill="${passiveActive?'#00e5a0':'#ffcc00'}">${passiveActive?'ACTIVE / TAKEOVER':'Standby Ready'}</text>
+    ${running&&stepIndex===2?'<text class="hp-text hp-blink" x="207" y="326" text-anchor="middle" fill="#00e5a0">TAKEOVER ACTIVE</text>':''}
+    <rect class="hp-host ${running&&[0,3].includes(stepIndex)?'active':''}" x="535" y="115" width="205" height="210" rx="8" opacity="${running&&stepIndex===2?'.28':'1'}"/>
+    <text class="hp-text" x="638" y="146" text-anchor="middle">Host / Cluster Inventory</text>
+    ${['Host 1','Host 2','Host 3','Storage'].map((x,i)=>`<rect class="hp-vm" x="585" y="${172+i*34}" width="106" height="24" rx="4"/><text class="hp-text hp-small" x="638" y="${188+i*34}" text-anchor="middle" fill="#00e5a0">${x}</text>`).join('')}
+    <rect class="hp-host ${activeDown?'hp-blink':''}" x="365" y="180" width="100" height="72" rx="8" opacity="${running&&stepIndex===2?'.55':'1'}"/>
+    <text class="hp-text hp-small" x="415" y="211" text-anchor="middle">HA</text>
+    <text class="hp-text hp-small" x="415" y="231" text-anchor="middle" fill="${passiveActive?'#00e5a0':'#ffcc00'}">${passiveActive?'Failover OK':'Heartbeat'}</text>
+    ${path}
+    ${ghost}
+    <text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="${inspect?'#ffcc00':'#6a7a9a'}">${esc(note)}</text>
+  </svg>`;
+}
+function buildHp015Animation(stepIndex,status){
+  const step=currentCase.steps[stepIndex]||'';
+  const inspect=isInspectionStep(step);
+  const running=status==='running'&&!inspect;
+  const statuses=getCaseStepStatuses();
+  const failed=statuses[0]==='done'||stepIndex===0||statuses[1]==='done';
+  const vmRestarted=failed;
+  let path='',ghost='',note='HA cluster waits for host failure event';
+  if(running&&stepIndex===0){
+    note='Host 1 failed: HA restarts VM on Host 2 / Host 3';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M175 210 C280 90 470 90 610 210"><animate attributeName="stroke-dashoffset" from="48" to="0" dur=".85s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('VM',175,210,610,210,0);
+  }else if(inspect){
+    note='Validation step: ตรวจสอบ VM restart และจำนวนไฟล์ RPO=0 ไม่มี animation';
+  }
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/></marker></defs>
+    <rect class="hp-site active" x="28" y="52" width="764" height="322" rx="10"/>
+    <text class="hp-text hp-label" x="48" y="84">HA Cluster - Site A</text>
+    <rect class="hp-host ${running&&stepIndex===0?'hp-blink':''}" x="72" y="120" width="190" height="178" rx="8" opacity="${failed?'.34':'1'}"/>
+    <text class="hp-text" x="167" y="150" text-anchor="middle">Host 1</text>
+    <text class="hp-text hp-small" x="167" y="171" text-anchor="middle" fill="${failed?'#ff3355':'#00e5a0'}">${failed?'POWER OFF / FAILED':'Running source'}</text>
+    ${failed?'<line x1="96" y1="140" x2="238" y2="270" stroke="#ff3355" stroke-width="3"/><line x1="238" y1="140" x2="96" y2="270" stroke="#ff3355" stroke-width="3"/><text class="hp-text hp-small hp-blink" x="167" y="278" text-anchor="middle" fill="#ff3355">HOST DOWN</text>':''}
+    <g opacity="${failed?'.12':'1'}">
+      <rect class="hp-vm" x="124" y="194" width="86" height="36" rx="5"/>
+      <text class="hp-text hp-small" x="167" y="217" text-anchor="middle" fill="#00e5a0">VM</text>
+    </g>
+    <rect class="hp-host" x="330" y="120" width="150" height="178" rx="8"/>
+    <text class="hp-text" x="405" y="150" text-anchor="middle">Host 2</text>
+    <text class="hp-text hp-small" x="405" y="171" text-anchor="middle" fill="#00e5a0">HA target</text>
+    <rect class="hp-host" x="560" y="120" width="150" height="178" rx="8"/>
+    <text class="hp-text" x="635" y="150" text-anchor="middle">Host 3</text>
+    <text class="hp-text hp-small" x="635" y="171" text-anchor="middle" fill="#00e5a0">HA target</text>
+    <g opacity="${vmRestarted?'1':'.16'}">
+      <rect class="hp-vm ${running&&stepIndex===0?'hp-blink':''}" x="592" y="194" width="86" height="36" rx="5"/>
+      <text class="hp-text hp-small" x="635" y="217" text-anchor="middle" fill="${vmRestarted?'#00e5a0':'#6a7a9a'}">VM</text>
+      <text class="hp-text hp-small" x="635" y="244" text-anchor="middle" fill="${vmRestarted?'#00e5a0':'#6a7a9a'}">Restarted</text>
+    </g>
+    <rect class="hp-host ${running&&stepIndex===0?'active':''}" x="330" y="316" width="380" height="42" rx="8"/>
+    <text class="hp-text hp-small" x="520" y="342" text-anchor="middle" fill="${vmRestarted?'#00e5a0':'#ffcc00'}">${vmRestarted?'RPO=0 file count preserved':'Timestamp file writer active'}</text>
+    ${path}
+    ${ghost}
+    <text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="${inspect?'#ffcc00':'#6a7a9a'}">${esc(note)}</text>
+  </svg>`;
+}
+function vmGrid(x,y,count=8,active=true,blink=false,prefix='VM'){
+  return Array.from({length:count},(_,i)=>{
+    const cx=x+(i%4)*52;
+    const cy=y+Math.floor(i/4)*36;
+    return `<g><rect class="hp-vm ${blink?'hp-blink':''}" x="${cx}" y="${cy}" width="44" height="26" rx="4" opacity="${active?'1':'.25'}"/><text class="hp-text hp-small" x="${cx+22}" y="${cy+17}" text-anchor="middle" fill="${active?'#00e5a0':'#6a7a9a'}">${prefix}${i+1}</text></g>`;
+  }).join('');
+}
+function buildBu001Animation(stepIndex,status){
+  const step=currentCase.steps[stepIndex]||'';
+  const inspect=isInspectionStep(step)&&![1,2].includes(stepIndex);
+  const running=status==='running'&&!inspect;
+  const statuses=getCaseStepStatuses();
+  const backedUp=statuses[0]==='done'||stepIndex===0||statuses[1]==='done'||statuses[2]==='done'||statuses[3]==='done';
+  const restoreStarted=statuses[2]==='done'||stepIndex===2||statuses[3]==='done';
+  const restored=statuses[3]==='done'||stepIndex===3;
+  let path='',ghost='',note='เลือก Step แล้วกด RUNNING เพื่อดู VM backup / restore workflow';
+  if(running&&stepIndex===0){
+    note='Agentless Full Backup: read VM snapshots and write restore points to repository';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M250 176 C350 94 475 94 585 176"><animate attributeName="stroke-dashoffset" from="48" to="0" dur=".85s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('FULL BACKUP',250,176,585,176,0);
+  }else if(running&&stepIndex===1){
+    note='Backup Job status check: all 8 VMs protected';
+  }else if(running&&stepIndex===2){
+    note='Restore VM from repository restore point';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M585 220 C475 315 335 315 235 250"><animate attributeName="stroke-dashoffset" from="48" to="0" dur=".85s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('RESTORE',585,220,235,250,0);
+  }else if(running&&stepIndex===3){
+    note='Power-on restored VMs and verify test files';
+  }else if(inspect){
+    note='Validation step: ตรวจสอบ job / VM / files ไม่มี animation';
+  }
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/></marker></defs>
+    <rect class="hp-site active" x="26" y="50" width="768" height="326" rx="10"/>
+    <text class="hp-text hp-label" x="46" y="82">BU-001 Agentless VM Backup and Restore</text>
+    <rect class="hp-host ${running&&[0,3].includes(stepIndex)?'active':''}" x="62" y="112" width="255" height="146" rx="8"/>
+    <text class="hp-text" x="190" y="142" text-anchor="middle">Protected VMs</text>
+    <text class="hp-text hp-small" x="190" y="162" text-anchor="middle">Windows Server 2016 x4 / Ubuntu 20.04 x4</text>
+    ${vmGrid(86,180,8,true,running&&stepIndex===3,'VM')}
+    <rect class="hp-host ${running&&[0,1].includes(stepIndex)?'active':''}" x="360" y="106" width="150" height="92" rx="8"/>
+    <text class="hp-text" x="435" y="138" text-anchor="middle">Backup Job</text>
+    <text class="hp-text hp-small" x="435" y="160" text-anchor="middle" fill="${backedUp?'#00e5a0':'#ffcc00'}">${backedUp?'SUCCESS x8':'FULL BACKUP'}</text>
+    <rect class="hp-host ${backedUp?'active':''}" x="560" y="112" width="185" height="146" rx="8"/>
+    <text class="hp-text" x="652" y="142" text-anchor="middle">Backup Repository</text>
+    <text class="hp-text hp-small" x="652" y="162" text-anchor="middle">Restore Point</text>
+    <g opacity="${backedUp?'1':'.25'}">${fileStack(610,188,4,'Full backup x8','#00e5a0')}</g>
+    <rect class="hp-host ${running&&stepIndex===2?'active':''}" x="360" y="252" width="150" height="78" rx="8"/>
+    <text class="hp-text" x="435" y="283" text-anchor="middle">Restore Job</text>
+    <text class="hp-text hp-small" x="435" y="305" text-anchor="middle" fill="${restoreStarted?'#00e5a0':'#6a7a9a'}">${restoreStarted?'RESTORE OK':'Waiting'}</text>
+    <rect class="hp-host ${restored?'active':''}" x="62" y="282" width="255" height="72" rx="8"/>
+    <text class="hp-text" x="190" y="312" text-anchor="middle">Restored VM Validation</text>
+    <text class="hp-text hp-small" x="190" y="334" text-anchor="middle" fill="${restored?'#00e5a0':'#6a7a9a'}">${restored?'Power-on OK / 5MB files match':'Power-on pending'}</text>
+    ${path}
+    ${ghost}
+    <text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="${inspect?'#ffcc00':'#6a7a9a'}">${esc(note)}</text>
+  </svg>`;
+}
+function buildBu002Animation(stepIndex,status){
+  const step=currentCase.steps[stepIndex]||'';
+  const inspect=isInspectionStep(step)&&![1,3,4].includes(stepIndex);
+  const running=status==='running'&&!inspect;
+  const statuses=getCaseStepStatuses();
+  const backedUp=statuses[0]==='done'||stepIndex===0||statuses[1]==='done'||statuses[2]==='done'||statuses[3]==='done'||statuses[4]==='done';
+  const deleted=statuses[2]==='done'||stepIndex===2;
+  const restored=statuses[3]==='done'||stepIndex===3||statuses[4]==='done';
+  let path='',ghost='',note='File-level restore workflow';
+  if(running&&stepIndex===0){
+    note='Agentless backup captures VM disk and file index';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M210 184 C335 92 475 92 600 184"><animate attributeName="stroke-dashoffset" from="48" to="0" dur=".85s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('BACKUP',210,184,600,184,0);
+  }else if(running&&stepIndex===2){
+    note='Delete test file inside VM';
+    ghost=hpGhost('DELETE',210,268,300,268,0);
+  }else if(running&&stepIndex===3){
+    note='Restore deleted file from repository to original VM';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M600 214 C475 320 335 320 230 268"><animate attributeName="stroke-dashoffset" from="48" to="0" dur=".85s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('FILE',600,214,230,268,0);
+  }else if(inspect){
+    note='Validation step: ตรวจสอบ job/file ไม่มี animation';
+  }
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/></marker></defs>
+    <rect class="hp-site active" x="26" y="50" width="768" height="326" rx="10"/>
+    <text class="hp-text hp-label" x="46" y="82">BU-002 File Level Restore</text>
+    <rect class="hp-host ${running&&[0,2,3].includes(stepIndex)?'active':''}" x="68" y="120" width="255" height="205" rx="8"/>
+    <text class="hp-text" x="196" y="150" text-anchor="middle">Protected VM</text>
+    <text class="hp-text hp-small" x="196" y="170" text-anchor="middle">Windows / Ubuntu, no pre-installed agent</text>
+    <rect class="hp-vm" x="154" y="190" width="84" height="36" rx="5"/>
+    <text class="hp-text hp-small" x="196" y="213" text-anchor="middle" fill="#00e5a0">VM Disk</text>
+    <rect class="hp-host ${deleted&&!restored?'hp-blink':''}" x="132" y="250" width="128" height="46" rx="7"/>
+    <text class="hp-text hp-small" x="196" y="278" text-anchor="middle" fill="${restored?'#00e5a0':deleted?'#ff3355':'#00e5a0'}">${restored?'5MB File Restored':deleted?'5MB File Deleted':'5MB Test File'}</text>
+    <rect class="hp-host ${running&&[0,1,3].includes(stepIndex)?'active':''}" x="520" y="120" width="225" height="205" rx="8"/>
+    <text class="hp-text" x="632" y="150" text-anchor="middle">Backup Repository</text>
+    <text class="hp-text hp-small" x="632" y="170" text-anchor="middle">File index + restore point</text>
+    <g opacity="${backedUp?'1':'.25'}">${fileStack(590,205,4,'Restore Point','#00e5a0')}</g>
+    <rect class="hp-host ${running&&stepIndex===3?'active hp-blink':''}" x="350" y="242" width="140" height="62" rx="8"/>
+    <text class="hp-text hp-small" x="420" y="267" text-anchor="middle">File Restore</text>
+    <text class="hp-text hp-small" x="420" y="286" text-anchor="middle" fill="${restored?'#00e5a0':'#ffcc00'}">${restored?'Completed':'Browse + recover'}</text>
+    ${path}
+    ${ghost}
+    <text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="${inspect?'#ffcc00':'#6a7a9a'}">${esc(note)}</text>
+  </svg>`;
+}
+function buildBu003Animation(stepIndex,status){
+  const step=currentCase.steps[stepIndex]||'';
+  const inspect=isInspectionStep(step)&&![1,3,4].includes(stepIndex);
+  const running=status==='running'&&!inspect;
+  const statuses=getCaseStepStatuses();
+  const backedUp=statuses[0]==='done'||stepIndex===0||statuses[1]==='done'||statuses[2]==='done'||statuses[3]==='done'||statuses[4]==='done';
+  const dropped=statuses[2]==='done'||stepIndex===2;
+  const restored=statuses[3]==='done'||stepIndex===3||statuses[4]==='done';
+  let path='',ghost='',note='SQL application-aware backup and restore';
+  if(running&&stepIndex===0){
+    note='Application-aware backup captures SQL database consistency';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M220 185 C340 90 475 90 600 185"><animate attributeName="stroke-dashoffset" from="48" to="0" dur=".85s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('SQL BKP',220,185,600,185,0);
+  }else if(running&&stepIndex===2){
+    note='Delete test database from SQL Server';
+    ghost=hpGhost('DROP DB',220,270,308,270,0);
+  }else if(running&&stepIndex===3){
+    note='Restore SQL database from application-aware restore point';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M600 218 C475 322 340 322 230 270"><animate attributeName="stroke-dashoffset" from="48" to="0" dur=".85s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('RESTORE DB',600,218,230,270,0);
+  }else if(inspect){
+    note='Validation step: ตรวจสอบ database และข้อมูล ไม่มี animation';
+  }
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/></marker></defs>
+    <rect class="hp-site active" x="26" y="50" width="768" height="326" rx="10"/>
+    <text class="hp-text hp-label" x="46" y="82">BU-003 Application-level Backup and Restore</text>
+    <rect class="hp-host ${running&&[0,2,3].includes(stepIndex)?'active':''}" x="68" y="112" width="260" height="218" rx="8"/>
+    <text class="hp-text" x="198" y="142" text-anchor="middle">Microsoft SQL Server VM</text>
+    <text class="hp-text hp-small" x="198" y="162" text-anchor="middle">SQL Server 2025 + test database</text>
+    <rect class="hp-vm" x="150" y="188" width="96" height="38" rx="6"/>
+    <text class="hp-text hp-small" x="198" y="211" text-anchor="middle" fill="#00e5a0">SQL Service</text>
+    <circle cx="198" cy="268" r="36" fill="${restored||!dropped?'rgba(0,229,160,.12)':'rgba(255,51,85,.12)'}" stroke="${restored||!dropped?'#00e5a0':'#ff3355'}" stroke-width="2" class="${dropped&&!restored?'hp-blink':''}"/>
+    <text class="hp-text hp-small" x="198" y="273" text-anchor="middle" fill="${restored||!dropped?'#00e5a0':'#ff3355'}">${restored?'DB Restored':dropped?'DB Deleted':'Test DB'}</text>
+    <rect class="hp-host ${running&&[0,1,3].includes(stepIndex)?'active':''}" x="520" y="112" width="225" height="218" rx="8"/>
+    <text class="hp-text" x="632" y="142" text-anchor="middle">Backup Repository</text>
+    <text class="hp-text hp-small" x="632" y="162" text-anchor="middle">Application-aware restore point</text>
+    <g opacity="${backedUp?'1':'.25'}">${fileStack(590,205,4,'SQL Restore Point','#00e5a0')}</g>
+    <rect class="hp-host ${running&&stepIndex===3?'active hp-blink':''}" x="350" y="246" width="140" height="62" rx="8"/>
+    <text class="hp-text hp-small" x="420" y="271" text-anchor="middle">DB Restore</text>
+    <text class="hp-text hp-small" x="420" y="290" text-anchor="middle" fill="${restored?'#00e5a0':'#ffcc00'}">${restored?'Completed':'Recover DB'}</text>
+    ${path}
+    ${ghost}
+    <text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="${inspect?'#ffcc00':'#6a7a9a'}">${esc(note)}</text>
+  </svg>`;
+}
+function buildBu004Animation(stepIndex,status){
+  const step=currentCase.steps[stepIndex]||'';
+  const inspect=isInspectionStep(step)&&![1,3,5].includes(stepIndex);
+  const running=status==='running'&&!inspect;
+  const statuses=getCaseStepStatuses();
+  const policyDone=statuses[0]==='done'||stepIndex===0||statuses[1]==='done';
+  const synthRestored=statuses[2]==='done'||stepIndex===2||statuses[3]==='done';
+  const incRestored=statuses[4]==='done'||stepIndex===4||statuses[5]==='done';
+  let path='',ghost='',note='Incremental chain and Synthetic Full workflow';
+  if(running&&stepIndex===0){
+    note='Run incremental policy: 8 restore points and at least 2 synthetic full cycles';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M215 178 C330 90 480 90 610 178"><animate attributeName="stroke-dashoffset" from="48" to="0" dur=".85s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('INCREMENTAL',215,178,610,178,0);
+  }else if(running&&stepIndex===2){
+    note='Restore VM from Synthetic Full restore point';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M610 198 C500 310 350 310 230 270"><animate attributeName="stroke-dashoffset" from="48" to="0" dur=".85s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('SYN FULL',610,198,230,270,0);
+  }else if(running&&stepIndex===4){
+    note='Restore VM from selected incremental point-in-time';
+    path='<path class="hp-path" marker-end="url(#hpArrow)" d="M610 240 C500 332 350 332 230 270"><animate attributeName="stroke-dashoffset" from="48" to="0" dur=".85s" repeatCount="indefinite"/></path>';
+    ghost=hpGhost('INC POINT',610,240,230,270,0);
+  }else if(running&&[3,5].includes(stepIndex)){
+    note='Power-on restored VM and validate restored data';
+  }else if(inspect){
+    note='Validation step: ตรวจสอบ restore point / job ไม่มี animation';
+  }
+  const points=Array.from({length:8},(_,i)=>`<rect class="hp-vm ${running&&stepIndex===0?'hp-blink':''}" x="${548+(i%4)*38}" y="${184+Math.floor(i/4)*34}" width="30" height="24" rx="4" opacity="${policyDone?'1':'.25'}"/><text class="hp-text hp-small" x="${563+(i%4)*38}" y="${200+Math.floor(i/4)*34}" text-anchor="middle" fill="${policyDone?'#00e5a0':'#6a7a9a'}">${i+1}</text>`).join('');
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/></marker></defs>
+    <rect class="hp-site active" x="26" y="50" width="768" height="326" rx="10"/>
+    <text class="hp-text hp-label" x="46" y="82">BU-004 Incremental / Synthetic Full Backup</text>
+    <rect class="hp-host ${running&&[0,3,5].includes(stepIndex)?'active':''}" x="68" y="112" width="260" height="218" rx="8"/>
+    <text class="hp-text" x="198" y="142" text-anchor="middle">Protected VMs</text>
+    <text class="hp-text hp-small" x="198" y="162" text-anchor="middle">8 VMs writing 5MB files every minute</text>
+    ${vmGrid(96,184,8,true,running&&[3,5].includes(stepIndex),'VM')}
+    <rect class="hp-host ${running&&[0,1,2,4].includes(stepIndex)?'active':''}" x="515" y="112" width="240" height="218" rx="8"/>
+    <text class="hp-text" x="635" y="142" text-anchor="middle">Backup Chain</text>
+    <text class="hp-text hp-small" x="635" y="162" text-anchor="middle">8 incremental restore points</text>
+    ${points}
+    <rect class="hp-host ${policyDone?'active':''}" x="550" y="262" width="72" height="38" rx="7"/>
+    <text class="hp-text hp-small" x="586" y="286" text-anchor="middle" fill="${policyDone?'#00e5a0':'#6a7a9a'}">SYN #1</text>
+    <rect class="hp-host ${policyDone?'active':''}" x="650" y="262" width="72" height="38" rx="7"/>
+    <text class="hp-text hp-small" x="686" y="286" text-anchor="middle" fill="${policyDone?'#00e5a0':'#6a7a9a'}">SYN #2</text>
+    <rect class="hp-host ${(synthRestored||incRestored)?'active':''}" x="350" y="252" width="140" height="62" rx="8"/>
+    <text class="hp-text hp-small" x="420" y="276" text-anchor="middle">Restore Test</text>
+    <text class="hp-text hp-small" x="420" y="295" text-anchor="middle" fill="${synthRestored||incRestored?'#00e5a0':'#6a7a9a'}">${incRestored?'Incremental OK':synthRestored?'Synthetic OK':'Waiting'}</text>
+    ${path}
+    ${ghost}
+    <text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="${inspect?'#ffcc00':'#6a7a9a'}">${esc(note)}</text>
+  </svg>`;
+}
+function getCaseAnimSpec(id){
+  const specs={
+    'HP-004':{title:'VM Cloning',nodes:[['Source VM','Original workload',110,130],['Clone Task','Copy VM config + disk',350,130],['Clone VM','Power-on validation',590,130]],flows:['Clone','Power-on','Validate']},
+  };
+  return specs[id]||null;
+}
+function buildMappedAnimation(spec,stepIndex,status){
+  const inspect=isInspectionStep(currentCase.steps[stepIndex]||'');
+  const running=status==='running'&&!inspect;
+  const active=Math.max(0,stepIndex??0);
+  const nodes=spec.nodes.map((n,i)=>{
+    const [title,sub,x,y]=n;
+    const isActive=running&&(i===Math.min(active,spec.nodes.length-1)||i===Math.min(active+1,spec.nodes.length-1));
+    return `<g>
+      <rect class="hp-host ${isActive?'active':''}" x="${x}" y="${y}" width="165" height="82" rx="8"/>
+      <text class="hp-text" x="${x+82.5}" y="${y+31}" text-anchor="middle">${esc(title)}</text>
+      <text class="hp-text hp-small" x="${x+82.5}" y="${y+52}" text-anchor="middle">${esc(sub)}</text>
+    </g>`;
+  }).join('');
+  const from=spec.nodes[Math.min(active,spec.nodes.length-1)];
+  const to=spec.nodes[Math.min(active+1,spec.nodes.length-1)]||from;
+  const fx=from[2]+82,fy=from[3]+41,tx=to[2]+82,ty=to[3]+41;
+  const flowLabel=spec.flows[active]||spec.flows[spec.flows.length-1]||'RUN';
+  const path=running&&from!==to?`<path class="hp-path" marker-end="url(#hpArrow)" d="M${fx} ${fy} C${(fx+tx)/2} ${Math.min(fy,ty)-85} ${(fx+tx)/2} ${Math.min(fy,ty)-85} ${tx} ${ty}"><animate attributeName="stroke-dashoffset" from="40" to="0" dur=".9s" repeatCount="indefinite"/></path>`:'';
+  const ghost=running&&from!==to?hpGhost(flowLabel,fx,fy,tx,ty,0):'';
+  const statusNote=inspect?`<text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="#ffcc00">Validation step: ไม่มี animation สำหรับขั้นตอนตรวจสอบ</text>`:running?`<text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="#ffcc00">${esc(flowLabel)} in progress</text>`:`<text class="hp-text hp-small" x="410" y="392" text-anchor="middle" fill="#6a7a9a">เลือก Step แล้วกด RUNNING เพื่อดู animation ของขั้นตอนนั้น</text>`;
+  return `<svg class="hp-anim-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="hpArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#ff6b00"/></marker></defs>
+    <rect class="hp-site active" x="20" y="46" width="780" height="330" rx="10"/>
+    <text class="hp-text hp-label" x="38" y="76">${esc(spec.title)}</text>
+    ${nodes}
+    ${path}
+    ${ghost}
+    ${statusNote}
+  </svg>`;
+}
+function renderAnimation(stepIndex=null,status='idle'){
+  const el=document.getElementById('animationStage');
+  if(!el)return;
+  if(!currentCase){
+    el.innerHTML='<div class="anim-empty">เลือก Test Case เพื่อแสดง procedure animation</div>';
+    return;
+  }
+  const running=status==='running';
+  const stepName=stepIndex===null?'เลือก Step แล้วกด RUNNING เพื่อเริ่ม animation':currentCase.steps[stepIndex];
+  let sites=[],movers='',link=running?'<div class="anim-link"></div>':'';
+  if(currentCase.id==='HP-001'){
+    const inspectStep=stepIndex!==null&&/ตรวจสอบสถานะของ VM/.test(currentCase.steps[stepIndex]||'');
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspectStep?'RUNNING':inspectStep?'VALIDATE':'READY'}</div></div>${buildHp001Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='HP-002'){
+    const validateStep=stepIndex===2;
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running?'RUNNING':validateStep?'VALIDATE':'READY'}</div></div>${buildHp002Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='HP-003'){
+    const validating=stepIndex===1;
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running?'RUNNING':validating?'VALIDATE':'READY'}</div></div>${buildHp003Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='HP-005'){
+    const inspect=isInspectionStep(stepName);
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspect?'RUNNING':inspect?'VALIDATE':'READY'}</div></div>${buildHp005Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='HP-006'){
+    const inspect=isInspectionStep(stepName);
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspect?'RUNNING':inspect?'VALIDATE':'READY'}</div></div>${buildHp006Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='HP-007'){
+    const inspect=isInspectionStep(stepName);
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspect?'RUNNING':inspect?'VALIDATE':'READY'}</div></div>${buildHp007Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='HP-008'){
+    const inspect=isInspectionStep(stepName);
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspect?'RUNNING':inspect?'VALIDATE':'READY'}</div></div>${buildHp008Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='HP-009'){
+    const inspect=isInspectionStep(stepName);
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspect?'RUNNING':inspect?'VALIDATE':'READY'}</div></div>${buildHp009Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='HP-010'){
+    const inspect=isInspectionStep(stepName)&&![1,6].includes(stepIndex);
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspect?'RUNNING':inspect?'VALIDATE':'READY'}</div></div>${buildHp010Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='HP-011'){
+    const inspect=isInspectionStep(stepName)&&stepIndex!==1;
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspect?'RUNNING':inspect?'VALIDATE':'READY'}</div></div>${buildHp011Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='HP-012'){
+    const inspect=isInspectionStep(stepName);
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspect?'RUNNING':inspect?'VALIDATE':'READY'}</div></div>${buildHp012Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='HP-013'){
+    const inspect=isInspectionStep(stepName);
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspect?'RUNNING':inspect?'VALIDATE':'READY'}</div></div>${buildHp013Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='HP-014'){
+    const inspect=isInspectionStep(stepName)&&![0,2,3].includes(stepIndex);
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspect?'RUNNING':inspect?'VALIDATE':'READY'}</div></div>${buildHp014Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='HP-015'){
+    const inspect=isInspectionStep(stepName);
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspect?'RUNNING':inspect?'VALIDATE':'READY'}</div></div>${buildHp015Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='BU-001'){
+    const inspect=isInspectionStep(stepName)&&![1,2].includes(stepIndex);
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspect?'RUNNING':inspect?'VALIDATE':'READY'}</div></div>${buildBu001Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='BU-002'){
+    const inspect=isInspectionStep(stepName)&&![1,3,4].includes(stepIndex);
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspect?'RUNNING':inspect?'VALIDATE':'READY'}</div></div>${buildBu002Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='BU-003'){
+    const inspect=isInspectionStep(stepName)&&![1,3,4].includes(stepIndex);
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspect?'RUNNING':inspect?'VALIDATE':'READY'}</div></div>${buildBu003Animation(stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='BU-004'){
+    const inspect=isInspectionStep(stepName)&&![1,3,5].includes(stepIndex);
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspect?'RUNNING':inspect?'VALIDATE':'READY'}</div></div>${buildBu004Animation(stepIndex,status)}`;
+    return;
+  }else if(getCaseAnimSpec(currentCase.id)){
+    const spec=getCaseAnimSpec(currentCase.id);
+    const inspect=isInspectionStep(stepName);
+    el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running&&!inspect?'RUNNING':inspect?'VALIDATE':'READY'}</div></div>${buildMappedAnimation(spec,stepIndex,status)}`;
+    return;
+  }else if(currentCase.id==='HP-004'){
+    sites=[animSite('Site A (DC)',[animNode('Source VM','Original workload',['VM']),animNode('Clone VM','Power-on target',['Clone'])],running)];
+    movers=running?animMovers(['Clone']):'';
+  }else if(currentCase.id==='HP-005'){
+    sites=[animSite('Site A (DC)',[animNode('VM','Test file workload',['VM']),animNode('Snapshot Chain','Create / revert / delete')],running)];
+    movers=running?animMovers(['Snapshot']):'';
+  }else if(currentCase.id==='HP-006'){
+    sites=[animSite('Image & Template',[
+      animNode('VM Template','Created from Windows Server VM'),
+      animNode('Image File','OVA / OVF / QCOW2'),
+      animNode('Deployed VM','Power-on validation',['VM'])
+    ],running)];
+    movers=running?animMovers(['Deploy']):'';
+  }else if(currentCase.id==='HP-010'){
+    const back=stepIndex>=5;
+    sites=[
+      animSite('Site A (Primary)',[animNode(back?'Target VM':'Primary VM','Replication source / fail-back',['VM'])],running&&back),
+      animSite('Site C (DR)',[animNode(back?'DR VM':'Replicated VM','Failover plan',['VM'])],running&&!back)
+    ];
+    movers=running?animMovers([back?'Fail-back':'Replicate']):'';
+  }else if(currentCase.id==='HP-011'){
+    sites=[animSite('VMware vSphere 8',[animNode('vCenter','Migration source'),animNode('VMware VM','Windows / Linux',['VM'])],running),animSite('Site A (DC)',[animNode('Host 1','Hypervisor target')],running)];
+    movers=running?animMovers(['VM']):'';
+  }else if(currentCase.id==='HP-012'){
+    sites=[animSite('Hypervisor Under Test',[animNode('VM','Migration source',['VM'])],running),animSite('VMware vSphere 8',[animNode('VMware Host','Migration target')],running)];
+    movers=running?animMovers(['VM']):'';
+  }else if(currentCase.id==='HP-013'){
+    sites=[animSite('Affinity Cluster',[animNode('Host 1','Power-off source',['VM-1']),animNode('Host 2','VM-2 active',['VM-2']),animNode('Host 3','Restart target')],running)];
+    movers=running?animMovers(['VM-1']):'';
+  }else if(currentCase.id==='HP-014'){
+    sites=[animSite('Centralized Management',[animNode('Active Manager','Primary control plane'),animNode('Standby Manager','HA target'),animNode('Host / Cluster Inventory','Unified management')],running)];
+    movers=running?animMovers(['Control']):'';
+  }else if(currentCase.id==='HP-015'){
+    sites=[animSite('HA Cluster - Site A',[animNode('Host 1','Failed host',['VM']),animNode('Host 2 / Host 3','Automatic restart target')],running)];
+    movers=running?animMovers(['VM Restart']):'';
+  }else if(currentCase.id.startsWith('HP-')){
+    sites=[animSite('Site A (DC)',[animNode('Host 1','Test workload',['VM']),animNode('Validation Target','Resource / OS / operation check')],running)];
+    movers=running?animMovers(['Check']):'';
+  }else if(currentCase.id==='BU-003'){
+    sites=[animSite('Application VM',[animNode('SQL Server 2025','Database workload'),animNode('Test Database','Backup / restore target')],running),animSite('Backup Infrastructure',[animNode('Backup Server','Application-aware job'),animNode('Repository','Restore point')],running)];
+    movers=running?animMovers(['DB']):'';
+  }else if(currentCase.id.startsWith('BU-')){
+    sites=[animSite('Protected VMs',[animNode('Windows / Linux VM','Agentless workload',['VM']),animNode('Restore Target','Power-on validation')],running),animSite('Backup Infrastructure',[animNode('Backup Server / Proxy','Job orchestration'),animNode('Backup Repository','Restore points')],running)];
+    movers=running?animMovers([currentCase.id==='BU-002'?'File':currentCase.id==='BU-004'?'Restore Point':'VM']):'';
+  }
+  el.innerHTML=`<div class="anim-head"><div><div class="anim-title">${esc(currentCase.id)}: ${esc(currentCase.name)}</div><div class="anim-sub">${esc(stepName)}</div></div><div class="anim-pill">${running?'RUNNING':'READY'}</div></div><div class="anim-map">${sites.join('')}</div>${link}${movers}`;
+}
+function selectMode(mode){
+  selected=mode;
+  document.getElementById('card-hyper').classList.toggle('sel',mode==='hyper');
+  document.getElementById('card-backup').classList.toggle('sel',mode==='backup');
+  const btn=document.getElementById('startBtn');
+  btn.classList.add('ready');
+  document.getElementById('hint').textContent=mode==='hyper'?'Hypervisor selected: HP-001 - HP-015':'Backup Software selected: BU-001 - BU-004';
+  document.getElementById('hint').classList.add('ok');
+}
+function startSelected(){
+  if(!selected)return;
+  currentPart=selected;
+  document.getElementById('pg-landing').style.display='none';
+  document.getElementById('pg-sim').style.display='flex';
+  document.getElementById('topIcon').innerHTML=currentPart==='hyper'?'&#9881;':'&#128190;';
+  document.getElementById('topTitle').textContent=currentPart==='hyper'?'HYPERVISOR POC SIMULATOR':'BACKUP SOFTWARE POC SIMULATOR';
+  document.getElementById('topSub').textContent=currentPart==='hyper'?'HP-001 - HP-015':'BU-001 - BU-004';
+  renderSummary();
+  renderButtons();
+  pickCase(cases[currentPart][0].id);
+}
+function backLanding(){
+  document.getElementById('pg-sim').style.display='none';
+  document.getElementById('pg-landing').style.display='flex';
+}
+function renderSummary(){
+  const data=currentPart==='hyper'
+    ? [['15','Hypervisor test cases'],['3','New Cluster hosts at Site A'],['1','Site B migration target'],['1','Site C warm site / DR']]
+    : [['4','Backup software test cases'],['8','Windows/Linux VM workload'],['2','Synthetic Full cycles'],['1','Backup Server / Repository']];
+  document.getElementById('summaryGrid').innerHTML=data.map(x=>`<div class="metric"><strong>${x[0]}</strong><span>${x[1]}</span></div>`).join('');
+}
+function openInfo(){document.getElementById('infoModal').classList.add('open');}
+function closeInfo(){document.getElementById('infoModal').classList.remove('open');}
+function modalBackdrop(e){if(e.target.id==='infoModal')closeInfo();}
+function renderButtons(){
+  const buttons=cases[currentPart].map(c=>`<button class="btn-s" id="btn-${c.id}" onclick="pickCase('${c.id}')"><span class="btn-id">${c.id}</span><span class="btn-name">${c.name}</span></button>`).join('');
+  document.getElementById('caseButtons').innerHTML=buttons;
+}
+function renderItems(items,cls='detail-item'){
+  return items.map(s=>`<div class="${cls}">${s}</div>`).join('');
+}
+function esc(v){
+  return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function statusText(status){
+  return (STEP_STATUSES.find(x=>x.key===status)||STEP_STATUSES[0]).label;
+}
+function countStatuses(statuses){
+  return STEP_STATUSES.reduce((acc,x)=>{acc[x.key]=statuses.filter(s=>s===x.key).length;return acc;},{});
+}
+function getOverallStatus(statuses){
+  if(statuses.includes('issue'))return {label:'ISSUE',cls:'issue',desc:'มีขั้นตอนที่ติดปัญหา ต้องตรวจสอบก่อนสรุปผ่าน'};
+  if(statuses.length&&statuses.every(x=>x==='done'))return {label:'DONE',cls:'done',desc:'ขั้นตอนทั้งหมดเสร็จครบแล้ว'};
+  if(statuses.includes('running'))return {label:'RUNNING',cls:'running',desc:'มีขั้นตอนกำลังดำเนินการ'};
+  if(statuses.some(x=>x==='done'))return {label:'IN PROGRESS',cls:'progress',desc:'ดำเนินการแล้วบางส่วน'};
+  return {label:'READY',cls:'ready',desc:'ยังไม่เริ่มดำเนินการ'};
+}
+function listHtml(items){
+  return `<ul>${items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`;
+}
+function getTesterName(){
+  return (document.getElementById('reportTesterName')?.value||'').trim();
+}
+function buildReportHtml(testerName=getTesterName()){
+  if(!currentCase)return '<div class="report-block">No test case selected.</div>';
+  const statuses=getCaseStepStatuses();
+  const counts=countStatuses(statuses);
+  const overall=getOverallStatus(statuses);
+  const generatedAt=new Date().toLocaleString('th-TH',{hour12:false});
+  const partName=currentPart==='hyper'?'Hypervisor':'Backup Software';
+  const tester=testerName||'-';
+  const stepRows=currentCase.steps.map((step,i)=>{
+    const st=statuses[i]||'pending';
+    return `<tr><td>${String(i+1).padStart(2,'0')}</td><td>${esc(step)}</td><td><span class="st ${st}">${statusText(st)}</span></td></tr>`;
+  }).join('');
+  return `
+    <div class="report-byline"><span><b>TESTER</b>${esc(tester)}</span></div>
+    <div class="report-meta">
+      <div class="metric"><strong>${esc(currentCase.id)}</strong><span>${esc(currentCase.name)}</span></div>
+      <div class="metric"><strong>${esc(overall.label)}</strong><span>${esc(overall.desc)}</span></div>
+      <div class="metric"><strong>${esc(partName)}</strong><span>Test Part</span></div>
+      <div class="metric"><strong>${esc(generatedAt)}</strong><span>Generated Date/Time</span></div>
+    </div>
+    <div class="summary-grid">
+      <div class="metric"><strong>${counts.done}</strong><span>DONE</span></div>
+      <div class="metric"><strong>${counts.running}</strong><span>RUNNING</span></div>
+      <div class="metric"><strong>${counts.issue}</strong><span>ISSUE</span></div>
+      <div class="metric"><strong>${counts.pending}</strong><span>PENDING</span></div>
+    </div>
+    <div>
+      <div class="section-label">Description</div>
+      <div class="report-block">${esc(currentCase.desc)}</div>
+    </div>
+    <div>
+      <div class="section-label">Test Procedures Status</div>
+      <table class="report-table">
+        <thead><tr><th style="width:54px">NO.</th><th>PROCEDURE</th><th style="width:120px">STATUS</th></tr></thead>
+        <tbody>${stepRows}</tbody>
+      </table>
+    </div>
+    <div>
+      <div class="section-label">Prerequisites / Pre-conditions</div>
+      <div class="report-block">${listHtml(currentCase.prereq)}</div>
+    </div>
+    <div>
+      <div class="section-label">Expected Results</div>
+      <div class="report-block">${listHtml(currentCase.expected)}</div>
+    </div>
+    <div>
+      <div class="section-label">Indicators</div>
+      <div class="report-block">${listHtml(currentCase.indicators)}</div>
+    </div>
+  `;
+}
+function generateReport(){
+  document.getElementById('reportContent').innerHTML=buildReportHtml();
+  document.getElementById('reportModal').classList.add('open');
+}
+function refreshReportPreview(){
+  if(document.getElementById('reportModal').classList.contains('open')){
+    document.getElementById('reportContent').innerHTML=buildReportHtml();
+  }
+}
+function closeReportModal(){document.getElementById('reportModal').classList.remove('open');}
+function reportBackdrop(e){if(e.target.id==='reportModal')closeReportModal();}
+function printReport(){
+  const testerName=getTesterName();
+  const html=buildReportHtml(testerName);
+  const w=window.open('','_blank');
+  if(!w)return;
+  w.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>NTT DATA</title>
+  <style>
+    body{font-family:Arial,'Noto Sans Thai',sans-serif;color:#111;margin:28px;line-height:1.55}
+    h1{font-size:22px;margin:0 0 14px} .section-label{font-weight:700;margin:18px 0 8px;color:#a34400;text-transform:uppercase;font-size:13px}
+    .report-wrap{display:grid;gap:12px}.report-meta,.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+    .metric{border:1px solid #bbb;padding:10px;border-radius:4px}.metric strong{display:block;font-size:18px}.metric span{font-size:12px;color:#555}
+    .report-byline{border:1px solid #bbb;padding:8px;border-radius:4px}.report-byline b{font-size:11px;color:#555;margin-right:6px}
+    .report-block{border:1px solid #ccc;padding:10px;border-radius:4px;white-space:pre-line}.report-block ul{margin:0 0 0 18px;padding:0}
+    table{width:100%;border-collapse:collapse}th,td{border:1px solid #aaa;padding:8px;text-align:left;vertical-align:top}th{background:#eee;font-size:12px}
+    .st{font-weight:700}.st.done{color:#00875a}.st.running{color:#9a6a00}.st.issue{color:#c5002b}.st.pending{color:#666}
+    @media print{body{margin:14mm}.no-print{display:none}}
+  </style></head><body><h1>NTT DATA - POC Test Procedure Report</h1><div class="report-wrap">${html}</div><script>document.title='NTT DATA';window.onload=()=>window.print();<\/script></body></html>`);
+  w.document.close();
+}
+function pickCase(id){
+  currentCase=cases[currentPart].find(c=>c.id===id);
+  document.querySelectorAll('.btn-s').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('btn-'+id);if(btn)btn.classList.add('active');
+  document.getElementById('caseId').textContent=currentCase.id;
+  document.getElementById('caseName').textContent=currentCase.name;
+  document.getElementById('caseDesc').textContent=currentCase.desc;
+  document.getElementById('caseStatus').className='status-pill ready';
+  document.getElementById('caseStatus').textContent='READY';
+  document.getElementById('casePrereq').innerHTML=renderItems(currentCase.prereq,'detail-item bullet');
+  renderSteps();
+  document.getElementById('caseExpected').innerHTML=renderItems(currentCase.expected,'detail-item bullet');
+  document.getElementById('caseIndicators').innerHTML=currentCase.indicators.map(s=>`<div class="indicator"><span class="dot">&#9679;</span><span>${s}</span></div>`).join('');
+  renderAnimation();
+  resetRun(false);
+  updateCaseStatusFromSteps();
+}
+function resetRun(resetSteps=false){
+  running=false;
+  if(resetSteps)resetCurrentStepStatuses();
+  updateCaseStatusFromSteps();
+  renderAnimation();
+  document.getElementById('eventLog').innerHTML=`<div class="le"><span class="lt">${nowTs()}</span><span class="lok">System ready. ${currentCase?currentCase.id:'No case'} loaded.</span></div>`;
+  document.getElementById('resultBox').className='result-box';
+  document.getElementById('resultBox').innerHTML=currentCase?`<b>${currentCase.id}: ${currentCase.name}</b><br><span style="color:var(--dim)">Expected Results:</span><br>${currentCase.expected.map(x=>`- ${x}`).join('<br>')}<br><div class="verdict" style="color:var(--warn)">&#9679; Waiting for simulation run</div>`:'<span style="color:var(--dim)">เลือก Test Case เพื่อดู Acceptance Criteria...</span>';
+}
+function log(msg,cls='lin'){
+  const el=document.getElementById('eventLog');
+  el.insertAdjacentHTML('beforeend',`<div class="le"><span class="lt">${nowTs()}</span><span class="${cls}">${msg}</span></div>`);
+  el.scrollTop=el.scrollHeight;
+}
+function wait(ms){return new Promise(r=>setTimeout(r,ms));}
+async function runCurrent(){
+  if(!currentCase||running)return;
+  running=true;
+  document.getElementById('caseStatus').className='status-pill running';
+  document.getElementById('caseStatus').textContent='RUNNING';
+  document.getElementById('eventLog').innerHTML='';
+  log(`[${currentCase.id}] ${currentCase.name} initialized`,'lac');
+  await wait(350);
+  log('Validating prerequisites and POC architecture scope...','lin');
+  await wait(500);
+  for(let i=0;i<currentCase.steps.length;i++){
+    setStepStatus(i,'running');
+    log(`STEP ${String(i+1).padStart(2,'0')}: ${currentCase.steps[i]}`,'lwn');
+    await wait(520);
+    setStepStatus(i,'done');
+    log(`CHECKPOINT ${String(i+1).padStart(2,'0')}: completed`,'lok');
+    await wait(260);
+  }
+  log('Collecting indicators and acceptance criteria evidence...','lin');
+  await wait(500);
+  currentCase.indicators.forEach(x=>log(`PASS: ${x}`,'lok'));
+  document.getElementById('caseStatus').className='status-pill pass';
+  document.getElementById('caseStatus').textContent='PASS';
+  document.getElementById('resultBox').className='result-box ok';
+  document.getElementById('resultBox').innerHTML=`<b>${currentCase.id}: ${currentCase.name}</b><br>${currentCase.expected.map(x=>`- ${x}`).join('<br>')}<br><div class="verdict">&#10004; POC PASS &mdash; Acceptance Criteria satisfied</div>`;
+  running=false;
+}
+// ── Diagram Settings ─────────────────────────────────────────────
+const DIAG_KEY='poc_diagram_settings_v1';
+const DEF_SET={
+  oldCluster:'Old Cluster', newCluster:'New Cluster',
+  siteA:'Site A (DC)', siteB:'Site B (MM)', siteC:'Site C (DR)',
+  esxiName:'ESXi', esxiIP:'',
+  ocvcName:'vCenter', ocvcIP:'',
+  ovcName:'vCenter', ovcIP:'',
+  nvcName:'vCenter', nvcIP:'',
+  h1Name:'Host 1', h1IP:'',
+  h2Name:'Host 2', h2IP:'',
+  h3Name:'Host 3', h3IP:'',
+  h4Name:'Host 4', h4IP:'',
+  h5Name:'Host 5', h5IP:'',
+  bksName:'Backup Server', bksIP:'',
+  bkrName:'Backup Storage', bkrIP:'',
+  storageName:'Storage', storageIP:''
+};
+let diagSet={};
+function loadDiagramSettings(){
+  try{const s=localStorage.getItem(DIAG_KEY);diagSet=s?{...DEF_SET,...JSON.parse(s)}:{...DEF_SET};}
+  catch(e){diagSet={...DEF_SET};}
+}
+function saveDiagramSettingsLS(){
+  try{localStorage.setItem(DIAG_KEY,JSON.stringify(diagSet));}catch(e){}
+}
+function resetDiagramSettings(){
+  if(!confirm('Reset ค่าทั้งหมดกลับเป็นค่าเริ่มต้น?'))return;
+  diagSet={...DEF_SET};
+  saveDiagramSettingsLS();
+  applyDiagramSettings();
+  populateSettingsForm();
+}
+function applyDiagramSettings(){
+  const s=diagSet;
+  const st=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v||'';};
+  st('svg-old-cluster-title',s.oldCluster);
+  st('svg-new-cluster-title',s.newCluster);
+  st('svg-site-a-label',s.siteA);
+  st('svg-site-b-label',s.siteB);
+  st('svg-site-c-label',s.siteC);
+  st('svg-old-esxi-name',s.esxiName); st('svg-old-esxi-ip',s.esxiIP);
+  st('svg-old-cluster-vc-name',s.ocvcName); st('svg-old-cluster-vc-ip',s.ocvcIP);
+  st('svg-old-vcenter-name',s.ovcName);
+  st('svg-old-vcenter-ip',s.ovcIP);
+  st('svg-new-vcenter-name',s.nvcName);
+  st('svg-new-vcenter-ip',s.nvcIP);
+  st('svg-host1-name',s.h1Name); st('svg-host1-ip',s.h1IP);
+  st('svg-host2-name',s.h2Name); st('svg-host2-ip',s.h2IP);
+  st('svg-host3-name',s.h3Name); st('svg-host3-ip',s.h3IP);
+  st('svg-host4-name',s.h4Name); st('svg-host4-ip',s.h4IP);
+  st('svg-host5-name',s.h5Name); st('svg-host5-ip',s.h5IP);
+  st('svg-bkp-server-name',s.bksName); st('svg-bkp-server-ip',s.bksIP);
+  st('svg-bkp-storage-name',s.bkrName); st('svg-bkp-storage-ip',s.bkrIP);
+  st('svg-storage-name',s.storageName); st('svg-storage-ip',s.storageIP);
+}
+function openSettingsModal(){populateSettingsForm();document.getElementById('settingsModal').classList.add('open');}
+function closeSettingsModal(){document.getElementById('settingsModal').classList.remove('open');}
+function settingsBackdrop(e){if(e.target.id==='settingsModal')closeSettingsModal();}
+function populateSettingsForm(){
+  const s=diagSet;
+  const pairs=[
+    ['si-old-cluster',s.oldCluster],['si-new-cluster',s.newCluster],
+    ['si-site-a',s.siteA],['si-site-b',s.siteB],['si-site-c',s.siteC],
+    ['si-esxi-name',s.esxiName],['si-esxi-ip',s.esxiIP],
+    ['si-ocvc-name',s.ocvcName],['si-ocvc-ip',s.ocvcIP],
+    ['si-ovc-name',s.ovcName],['si-ovc-ip',s.ovcIP],
+    ['si-nvc-name',s.nvcName],['si-nvc-ip',s.nvcIP],
+    ['si-h1-name',s.h1Name],['si-h1-ip',s.h1IP],
+    ['si-h2-name',s.h2Name],['si-h2-ip',s.h2IP],
+    ['si-h3-name',s.h3Name],['si-h3-ip',s.h3IP],
+    ['si-h4-name',s.h4Name],['si-h4-ip',s.h4IP],
+    ['si-h5-name',s.h5Name],['si-h5-ip',s.h5IP],
+    ['si-bks-name',s.bksName],['si-bks-ip',s.bksIP],
+    ['si-bkr-name',s.bkrName],['si-bkr-ip',s.bkrIP],
+    ['si-storage-name',s.storageName],['si-storage-ip',s.storageIP],
+  ];
+  pairs.forEach(([id,v])=>{const e=document.getElementById(id);if(e)e.value=v||'';});
+}
+function saveSettingsForm(){
+  const g=(id)=>(document.getElementById(id)||{}).value||'';
+  diagSet={
+    oldCluster:g('si-old-cluster')||DEF_SET.oldCluster,
+    newCluster:g('si-new-cluster')||DEF_SET.newCluster,
+    siteA:g('si-site-a')||DEF_SET.siteA,
+    siteB:g('si-site-b')||DEF_SET.siteB,
+    siteC:g('si-site-c')||DEF_SET.siteC,
+    esxiName:g('si-esxi-name')||DEF_SET.esxiName, esxiIP:g('si-esxi-ip'),
+    ocvcName:g('si-ocvc-name')||DEF_SET.ocvcName, ocvcIP:g('si-ocvc-ip'),
+    ovcName:g('si-ovc-name')||DEF_SET.ovcName, ovcIP:g('si-ovc-ip'),
+    nvcName:g('si-nvc-name')||DEF_SET.nvcName, nvcIP:g('si-nvc-ip'),
+    h1Name:g('si-h1-name')||'Host 1', h1IP:g('si-h1-ip'),
+    h2Name:g('si-h2-name')||'Host 2', h2IP:g('si-h2-ip'),
+    h3Name:g('si-h3-name')||'Host 3', h3IP:g('si-h3-ip'),
+    h4Name:g('si-h4-name')||'Host 4', h4IP:g('si-h4-ip'),
+    h5Name:g('si-h5-name')||'Host 5', h5IP:g('si-h5-ip'),
+    bksName:g('si-bks-name')||'Backup Server', bksIP:g('si-bks-ip'),
+    bkrName:g('si-bkr-name')||'Backup Storage', bkrIP:g('si-bkr-ip'),
+    storageName:g('si-storage-name')||'Storage', storageIP:g('si-storage-ip'),
+  };
+  saveDiagramSettingsLS();
+  applyDiagramSettings();
+  closeSettingsModal();
+}
+window.onload=()=>{loadDiagramSettings();loadStepStatuses();applyDiagramSettings();selectMode('hyper');};
+</script></body></html>
