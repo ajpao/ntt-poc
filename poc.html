@@ -57,9 +57,10 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
 .mc-name{font-size:1.18rem;font-weight:700;margin-bottom:8px}
 .mc-desc{font-size:.82rem;color:var(--dim);line-height:1.75;margin-bottom:12px}
 .mc-sc{font-family:'Share Tech Mono',monospace;font-size:.66rem;line-height:1.95;border-top:1px solid var(--border);padding-top:9px;color:rgba(224,234,255,.72)}
-.start-btn{width:100%;max-width:920px;padding:15px;font-family:'Share Tech Mono',monospace;font-size:.95rem;letter-spacing:3px;font-weight:700;border-radius:8px;border:2px solid var(--dim);background:transparent;color:var(--dim);cursor:not-allowed;transition:.25s;text-transform:uppercase;margin-bottom:10px}
-.start-btn.ready{cursor:pointer;border-color:var(--accent);color:#fff;background:rgba(255,107,0,.13);box-shadow:0 0 24px rgba(255,107,0,.22)}
-.start-btn.ready:hover{background:rgba(255,107,0,.25);transform:translateY(-1px)}
+.start-btn{width:100%;max-width:920px;padding:16px;font-family:'Share Tech Mono',monospace;font-size:1rem;letter-spacing:4px;font-weight:700;border-radius:8px;border:2px solid var(--dim);background:transparent;color:var(--dim);cursor:not-allowed;transition:.25s;text-transform:uppercase;margin-bottom:10px;position:relative;overflow:hidden}
+.start-btn.ready{cursor:pointer;border-color:var(--accent);color:#fff;background:linear-gradient(90deg,#c84e00,#ff6b00,#ff8c2a);animation:btnGlow 2s ease-in-out infinite}
+.start-btn.ready:hover{background:linear-gradient(90deg,#e05500,#ff7a10,#ffa04a);transform:translateY(-2px)}
+@keyframes btnGlow{0%,100%{box-shadow:0 0 22px rgba(255,107,0,.35)}50%{box-shadow:0 0 48px rgba(255,107,0,.75),0 0 90px rgba(255,107,0,.22)}}
 .hint-txt{font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--dim);text-align:center;letter-spacing:1px;min-height:16px;margin-bottom:22px}
 .hint-txt.ok{color:var(--ok)}
 .credit-box{width:100%;max-width:920px;padding-top:18px;border-top:1px solid var(--border);text-align:center;font-family:'Share Tech Mono',monospace}
@@ -67,6 +68,22 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
 .qr-wrap{position:fixed;top:18px;right:18px;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:10}
 .qr-wrap canvas,.qr-wrap img{border-radius:0;border:1px solid rgba(255,255,255,.2);box-shadow:0 0 18px rgba(255,255,255,.12)}
 .qr-label{font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--dim);letter-spacing:3px}
+.step-filter{display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap}
+.sf-btn{font-family:'Share Tech Mono',monospace;font-size:.56rem;letter-spacing:1.5px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--dim);padding:3px 10px;cursor:pointer;transition:.18s;text-transform:uppercase}
+.sf-btn:hover{border-color:var(--accent);color:var(--text)}
+.sf-btn.active{color:var(--text)}
+.sf-btn.active[data-f="all"]{border-color:rgba(224,234,255,.5);background:rgba(224,234,255,.07)}
+.sf-btn.active[data-f="pending"]{border-color:rgba(123,140,174,.6);background:rgba(123,140,174,.1)}
+.sf-btn.active[data-f="done"]{border-color:rgba(0,229,160,.65);color:var(--ok);background:rgba(0,229,160,.1)}
+.sf-btn.active[data-f="issue"]{border-color:rgba(255,51,85,.65);color:var(--danger);background:rgba(255,51,85,.1)}
+.sf-empty{font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--dim);text-align:center;padding:24px;letter-spacing:1px}
+.celeb-toast{position:fixed;bottom:28px;right:28px;z-index:500;background:rgba(8,16,30,.97);border:1.5px solid var(--ok);border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 0 48px rgba(0,229,160,.28),0 4px 24px rgba(0,0,0,.5);transform:translateX(calc(100% + 40px));transition:transform .45s cubic-bezier(.34,1.56,.64,1);pointer-events:none;min-width:240px}
+.celeb-toast.show{transform:translateX(0)}
+.celeb-toast-icon{font-size:1.8rem;color:var(--ok);filter:drop-shadow(0 0 12px rgba(0,229,160,.9));line-height:1;flex-shrink:0}
+.celeb-toast-title{font-family:'Share Tech Mono',monospace;font-size:.74rem;color:var(--ok);letter-spacing:2px;margin-bottom:3px}
+.celeb-toast-sub{font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--dim);letter-spacing:1px}
+.progress-bar-fill.complete{animation:pbComplete 1.6s ease-in-out infinite!important}
+@keyframes pbComplete{0%,100%{filter:drop-shadow(0 0 6px rgba(0,229,160,.55)) brightness(1)}50%{filter:drop-shadow(0 0 22px rgba(0,229,160,1)) brightness(1.18)}}
 .sim-page{display:none;flex-direction:column}
 .topbar{height:58px;background:#0a1020;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;padding:0 22px;position:sticky;top:0;z-index:30}
 .topbar-icon{font-size:1.35rem}.topbar-title{font-family:'Share Tech Mono',monospace;color:var(--accent);font-size:1rem;letter-spacing:2px;flex:1}.topbar-sub{font-family:'Share Tech Mono',monospace;font-size:.68rem;color:var(--dim)}
@@ -290,7 +307,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
       <div class="mc-sc">BU-001 - BU-004<br>4 Test Cases</div>
     </div>
   </div>
-  <button id="startBtn" class="start-btn" onclick="startSelected()">INITIALIZE SELECTED PART</button>
+  <button id="startBtn" class="start-btn" onclick="startSelected()">▶&nbsp;&nbsp;BEGIN TEST</button>
   <div id="hint" class="hint-txt">Choose Hypervisor or Backup Software to continue</div>
   <div class="credit-box">
     <div class="credit-name">POC Architecture Simulator</div>
@@ -660,6 +677,12 @@ opacity:1
         <div class="section-label">Prerequisites / Pre-conditions</div>
         <div class="detail-list" id="casePrereq"></div>
         <div class="section-label">Test Procedures</div>
+        <div class="step-filter" id="stepFilter">
+          <button class="sf-btn active" data-f="all" onclick="setStepFilter('all')">ALL</button>
+          <button class="sf-btn" data-f="pending" onclick="setStepFilter('pending')">PENDING</button>
+          <button class="sf-btn" data-f="done" onclick="setStepFilter('done')">DONE</button>
+          <button class="sf-btn" data-f="issue" onclick="setStepFilter('issue')">ISSUE</button>
+        </div>
         <div class="steps" id="caseSteps"></div>
         <div class="section-label">Expected Results</div>
         <div class="detail-list" id="caseExpected"></div>
@@ -692,6 +715,11 @@ opacity:1
   </div>
 </div>
 
+<!-- Completion Toast -->
+<div class="celeb-toast" id="celebToast">
+  <div class="celeb-toast-icon">✓</div>
+  <div><div class="celeb-toast-title">TEST CASE COMPLETE</div><div class="celeb-toast-sub" id="celebCaseName"></div></div>
+</div>
 <!-- Reset All Confirm Modal -->
 <div class="modal-ov" id="resetAllModal" onclick="resetAllBackdrop(event)">
   <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="resetAllTitle" style="width:min(640px,96vw)">
@@ -820,6 +848,7 @@ const cases={
   ]
 };
 let selected=null,currentPart=null,currentCase=null,running=false;
+let currentStepFilter='all',celebTimer=null;
 const STEP_STATUS_KEY='poc_step_status_v1';
 const STEP_STATUSES=[
   {key:'pending',label:'PENDING'},
@@ -881,6 +910,23 @@ function updateCaseProgressBar(){
     stat.textContent=`${done} / ${total} steps (${pct}%)${issue?' · '+issue+' issue':''}`;
     stat.classList.toggle('has-issue',issue>0);
   }
+  const fill2=document.getElementById('casePbFill');
+  if(total>0&&done===total&&!issue){showCelebration();}
+  else{fill2?.classList.remove('complete');}
+}
+function showCelebration(){
+  const toast=document.getElementById('celebToast');
+  if(!toast)return;
+  const sub=document.getElementById('celebCaseName');
+  if(sub&&currentCase)sub.textContent=currentCase.id+' · '+currentCase.name;
+  document.getElementById('casePbFill')?.classList.add('complete');
+  toast.classList.add('show');
+  clearTimeout(celebTimer);
+  celebTimer=setTimeout(()=>toast.classList.remove('show'),3500);
+}
+function closeCelebration(){
+  clearTimeout(celebTimer);
+  document.getElementById('celebToast')?.classList.remove('show');
 }
 function updateProgressBar(){
   if(!currentPart)return;
@@ -982,8 +1028,10 @@ function updateCaseStatusFromSteps(){
 function renderSteps(){
   if(!currentCase)return;
   const statuses=getCaseStepStatuses();
-  document.getElementById('caseSteps').innerHTML=currentCase.steps.map((s,i)=>{
+  const f=currentStepFilter;
+  const rows=currentCase.steps.map((s,i)=>{
     const st=statuses[i]||'pending';
+    if(f!=='all'&&st!==f)return '';
     const note=getNote(i);
     const hasNote=note.trim().length>0;
     const noteOpen=openNoteKeys.has(caseKey()+':'+i);
@@ -992,7 +1040,13 @@ function renderSteps(){
     const noteArea=`<div class="note-area" id="note-area-${i}" style="display:${noteOpen?'block':'none'}"><textarea class="note-input" placeholder="บันทึก issue / remark สำหรับ step นี้..." oninput="setNote(${i},this.value)">${esc(note)}</textarea></div>`;
     return `<div class="step ${st==='pending'?'':st}"><div class="step-main"><span class="num">${String(i+1).padStart(2,'0')}</span><div class="step-content"><span class="step-text">${s}</span>${noteBtn}</div></div><div class="step-status" aria-label="Step ${i+1} status">${buttons}</div>${noteArea}</div>`;
   }).join('');
+  document.getElementById('caseSteps').innerHTML=rows||`<div class="sf-empty">— NO ${f.toUpperCase()} STEPS —</div>`;
   updateCaseProgressBar();
+}
+function setStepFilter(f){
+  currentStepFilter=f;
+  document.querySelectorAll('.sf-btn').forEach(b=>b.classList.toggle('active',b.dataset.f===f));
+  renderSteps();
 }
 function animNode(title,subtitle='',vms=[]){
   const vmHtml=vms.length?`<div class="anim-vms">${vms.map(x=>`<span class="anim-vm">${esc(x)}</span>`).join('')}</div>`:'';
@@ -2300,6 +2354,8 @@ function printReport(){
 }
 function pickCase(id){
   currentCase=cases[currentPart].find(c=>c.id===id);
+  currentStepFilter='all';
+  document.querySelectorAll('.sf-btn').forEach(b=>b.classList.toggle('active',b.dataset.f==='all'));
   document.querySelectorAll('.btn-s').forEach(b=>b.classList.remove('active'));
   const btn=document.getElementById('btn-'+id);if(btn)btn.classList.add('active');
   document.getElementById('caseId').textContent=currentCase.id;
