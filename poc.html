@@ -2842,6 +2842,7 @@ function renderVmTable(){
       <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap;min-width:34px">OS:</span>
       <button class="vm-filter-btn${!_vmFilterOs?' active':''}" onclick="_vmFilterOs=null;renderVmTable()">ALL</button>
       ${allOs.map(o=>`<button class="vm-filter-btn${_vmFilterOs===o?' active':''}" onclick="_vmFilterOs=${_vmFilterOs===o?'null':`'${o.replace(/'/g,"\\'")}'`};renderVmTable()">${esc(o)}</button>`).join('')}
+      <button class="vm-filter-btn" style="margin-left:16px;border-color:var(--danger);color:var(--danger)" onclick="_vmSearch='';_vmFilterOs=null;_vmFilterSite=null;renderVmTable()" title="ล้างทุกการค้นหาและกรอง">✕ CLEAR FILTER</button>
     </div>
   </div>
   ${!list.length?'<div class="vm-empty">ไม่พบรายการที่ตรงกับการค้นหา</div>':`
@@ -2860,7 +2861,7 @@ function renderVmTable(){
       <td style="color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:.65rem;text-align:center">${i+1}</td>
       <td style="font-family:'Share Tech Mono',monospace;color:var(--ok);font-size:.76rem">${esc(v.name)}</td>
       <td style="font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--dim)">${esc(v.hostname||'—')}</td>
-      <td><span class="vm-site-tag ${_siteCls(v.site)}">${esc(v.site||'—')}</span></td>
+      <td><span class="vm-site-tag ${_siteCls(v.site)}" onclick="_vmFilterSite=_vmFilterSite==='${v.site.replace(/'/g,"\\'")}'?null:'${v.site.replace(/'/g,"\\'")}';renderVmTable()" title="คลิกเพื่อ filter Site นี้" style="cursor:pointer">${esc(v.site||'—')}</span></td>
       <td><span class="vm-os-tag" onclick="_vmFilterOs=_vmFilterOs==='${v.os.replace(/'/g,"\\'")}'?null:'${v.os.replace(/'/g,"\\'")}';renderVmTable()" title="คลิกเพื่อ filter OS นี้">${esc(v.os||'—')}</span></td>
       <td style="font-family:'Share Tech Mono',monospace;color:var(--info);font-size:.76rem">${esc(v.ip||'—')}</td>
       <td style="font-size:.76rem;color:var(--dim);max-width:320px;word-break:break-word">${esc(v.func||'—')}</td>
