@@ -2839,6 +2839,7 @@ function renderVmTable(){
         <button class="vm-filter-btn" onclick="_vmSearch=document.getElementById('vmSearchInput').value;renderVmTable()" title="ค้นหา" style="white-space:nowrap">🔍 SEARCH</button>
       </div>
       <span class="vm-count" style="margin-left:0">${list.length} / ${vmInventory.length} รายการ</span>
+      <button class="vm-filter-btn" style="border-color:var(--danger);color:var(--danger);white-space:nowrap" onclick="_vmSearch='';document.getElementById('vmSearchInput').value='';_vmFilterOs=null;_vmFilterSite=null;renderVmTable()" title="ล้างทุกการค้นหาและกรอง">✕ CLEAR</button>
     </div>
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
       <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap;min-width:34px">SITE:</span>
@@ -2849,7 +2850,6 @@ function renderVmTable(){
       <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap;min-width:34px">OS:</span>
       <button class="vm-filter-btn${!_vmFilterOs?' active':''}" onclick="_vmFilterOs=null;renderVmTable()">ALL</button>
       ${allOs.map(o=>`<button class="vm-filter-btn${_vmFilterOs===o?' active':''}" onclick="_vmFilterOs=${_vmFilterOs===o?'null':`'${o.replace(/'/g,"\\'")}'`};renderVmTable()">${esc(o)}</button>`).join('')}
-      <button class="vm-filter-btn" style="margin-left:16px;border-color:var(--danger);color:var(--danger)" onclick="_vmSearch='';_vmFilterOs=null;_vmFilterSite=null;renderVmTable()" title="ล้างทุกการค้นหาและกรอง">✕ CLEAR FILTER</button>
     </div>
   </div>
   ${!list.length?'<div class="vm-empty">ไม่พบรายการที่ตรงกับการค้นหา</div>':`
