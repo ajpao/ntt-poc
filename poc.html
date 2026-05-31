@@ -2768,7 +2768,19 @@ function cancelVmForm(){
   f.classList.add('hidden');
   ['vf-name','vf-os','vf-ip','vf-hostname','vf-func','vf-edit-id'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
-let _vmSearch='',_vmFilterOs=null,_vmFilterSite=null,_vmSortIp=null,_vmSortName=null,_vmSearchTimer=null;
+let _vmSearch='',_vmFilterOs=null,_vmFilterSite=null,_vmFilterSubnet=null,_vmSortIp=null,_vmSortName=null,_vmSearchTimer=null;
+const VM_VLANS=[
+  {id:'v10',name:'VLAN 10',desc:'Management',range:'172.31.10.0/24'},
+  {id:'v20',name:'VLAN 20',desc:'vMotion',range:'172.31.20.0/24'},
+  {id:'v30',name:'VLAN 30',desc:'vSAN',range:'172.31.30.0/24'},
+  {id:'v40',name:'VLAN 40',desc:'VM Production',range:'172.31.40.0/24'},
+  {id:'v50',name:'VLAN 50',desc:'Backup',range:'172.31.50.0/24'}
+];
+function _getVlanId(ip){
+  if(!ip)return null;
+  const octet3=parseInt(ip.split('.')[2],10);
+  return octet3===10?'v10':octet3===20?'v20':octet3===30?'v30':octet3===40?'v40':octet3===50?'v50':null;
+}
 function _ipToNum(ip){const p=(ip||'').split('.').map(Number);return((p[0]||0)<<24)|((p[1]||0)<<16)|((p[2]||0)<<8)|(p[3]||0);}
 function _siteCls(site){
   const m={'Old Cluster':'old','Site A (DC)':'siteA','Site B (MM)':'siteB','Site C (DR)':'siteC','Management':'mgmt','Backup':'backup'};
@@ -2815,6 +2827,7 @@ function renderVmTable(){
   if(_vmSearch){const q=_vmSearch.toLowerCase();list=list.filter(v=>[v.name,v.hostname,v.ip,v.os,v.site,v.func].some(f=>(f||'').toLowerCase().includes(q)));}
   if(_vmFilterOs)list=list.filter(v=>v.os===_vmFilterOs);
   if(_vmFilterSite)list=list.filter(v=>v.site===_vmFilterSite);
+  if(_vmFilterSubnet)list=list.filter(v=>_getVlanId(v.ip)===_vmFilterSubnet);
   // sort by Name
   if(_vmSortName==='asc')list.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   else if(_vmSortName==='desc')list.sort((a,b)=>(b.name||'').localeCompare(a.name||''));
@@ -2850,8 +2863,13 @@ function renderVmTable(){
       <button class="vm-filter-btn${!_vmFilterOs?' active':''}" onclick="_vmFilterOs=null;renderVmTable()">ALL</button>
       ${allOs.map(o=>`<button class="vm-filter-btn${_vmFilterOs===o?' active':''}" onclick="_vmFilterOs=${_vmFilterOs===o?'null':`'${o.replace(/'/g,"\\'")}'`};renderVmTable()">${esc(o)}</button>`).join('')}
     </div>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
+      <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap">VLAN / SUBNET:</span>
+      <button class="vm-filter-btn${!_vmFilterSubnet?' active-site':''}" onclick="_vmFilterSubnet=null;renderVmTable()">ALL</button>
+      ${VM_VLANS.map(v=>`<button class="vm-filter-btn${_vmFilterSubnet===v.id?' active-site':''}" onclick="_vmFilterSubnet=_vmFilterSubnet==='${v.id}'?null:'${v.id}';renderVmTable()" title="${v.desc} ${v.range}">${v.name}</button>`).join('')}
+    </div>
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">
-      <button class="vm-filter-btn" style="border-color:var(--danger);color:var(--danger);border-width:2px;padding:7px 16px;font-size:.78rem;font-weight:600;letter-spacing:1px" onclick="_vmSearch='';document.getElementById('vmSearchInput').value='';_vmFilterOs=null;_vmFilterSite=null;renderVmTable()" title="ล้างทุกการค้นหาและกรอง">✕ CLEAR FILTER</button>
+      <button class="vm-filter-btn" style="border-color:var(--danger);color:var(--danger);border-width:2px;padding:7px 16px;font-size:.78rem;font-weight:600;letter-spacing:1px" onclick="_vmSearch='';document.getElementById('vmSearchInput').value='';_vmFilterOs=null;_vmFilterSite=null;_vmFilterSubnet=null;renderVmTable()" title="ล้างทุกการค้นหาและกรอง">✕ CLEAR FILTER</button>
     </div>
   </div>
   ${!list.length?'<div class="vm-empty">ไม่พบรายการที่ตรงกับการค้นหา</div>':`
