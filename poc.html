@@ -105,11 +105,33 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
 .vm-float{position:fixed;top:128px;right:20px;width:42px;height:42px;border-radius:50%;border:1px solid rgba(168,85,247,.55);background:rgba(12,20,36,.9);color:#a855f7;font-family:'Share Tech Mono',monospace;font-size:.62rem;font-weight:700;cursor:pointer;display:grid;place-items:center;box-shadow:0 0 22px rgba(168,85,247,.18);transition:.2s;z-index:80;line-height:1.1;text-align:center}
 .vm-float:hover{border-color:var(--purple);color:#fff;box-shadow:0 0 26px rgba(168,85,247,.32);transform:translateY(-1px)}
 .vm-table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}
-.vm-table th,.vm-table td{border:1px solid rgba(29,47,80,.86);padding:8px 10px;text-align:left;vertical-align:middle}
-.vm-table th{font-family:'Share Tech Mono',monospace;color:var(--purple);background:rgba(16,26,46,.72);font-size:.68rem;letter-spacing:1px}
-.vm-table td{color:var(--text)}
-.vm-table tr:hover td{background:rgba(168,85,247,.06)}
-.vm-os-tag{font-family:'Share Tech Mono',monospace;font-size:.6rem;padding:2px 7px;border-radius:4px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);color:#c084fc;white-space:nowrap}
+.vm-table th,.vm-table td{border:1px solid rgba(29,47,80,.9);padding:8px 10px;text-align:left;vertical-align:middle}
+.vm-table th{font-family:'Share Tech Mono',monospace;color:var(--purple);background:#0a1120;font-size:.68rem;letter-spacing:1px;white-space:nowrap;user-select:none}
+.vm-table th.sortable{cursor:pointer}.vm-table th.sortable:hover{color:#fff}
+.vm-table th .sort-icon{margin-left:4px;opacity:.45;font-size:.7rem}
+.vm-table th.sort-asc .sort-icon,.vm-table th.sort-desc .sort-icon{opacity:1;color:var(--ok)}
+.vm-table tbody tr:nth-child(odd) td{background:#0c1628}
+.vm-table tbody tr:nth-child(even) td{background:#091220}
+.vm-table tbody tr:hover td{background:#142040!important}
+.vm-os-tag{font-family:'Share Tech Mono',monospace;font-size:.6rem;padding:2px 7px;border-radius:4px;background:rgba(168,85,247,.18);border:1px solid rgba(168,85,247,.4);color:#c084fc;white-space:nowrap;cursor:pointer;transition:.15s}
+.vm-os-tag:hover{background:rgba(168,85,247,.35);color:#fff}
+.vm-site-tag{font-family:'Share Tech Mono',monospace;font-size:.6rem;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.vm-site-tag.old{background:rgba(199,23,23,.15);border:1px solid rgba(199,23,23,.4);color:#ff7070}
+.vm-site-tag.siteA{background:rgba(0,229,160,.12);border:1px solid rgba(0,229,160,.35);color:#00e5a0}
+.vm-site-tag.siteB{background:rgba(51,153,255,.12);border:1px solid rgba(51,153,255,.35);color:#6ec1ff}
+.vm-site-tag.siteC{background:rgba(255,204,0,.12);border:1px solid rgba(255,204,0,.35);color:#ffcc00}
+.vm-site-tag.mgmt{background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.35);color:#c084fc}
+.vm-site-tag.backup{background:rgba(255,107,0,.12);border:1px solid rgba(255,107,0,.35);color:#ff9a4a}
+.vm-site-tag.other{background:rgba(123,140,174,.12);border:1px solid rgba(123,140,174,.3);color:var(--dim)}
+.vm-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px 12px;background:#0a1120;border:1px solid var(--border);border-radius:8px}
+.vm-search{flex:1;min-width:180px;background:#091220;border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.78rem;padding:6px 10px;outline:none;transition:.2s}
+.vm-search:focus{border-color:var(--purple);box-shadow:0 0 0 2px rgba(168,85,247,.12)}
+.vm-search::placeholder{color:var(--dim)}
+.vm-filter-btn{font-family:'Share Tech Mono',monospace;font-size:.6rem;padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--dim);cursor:pointer;transition:.15s;white-space:nowrap}
+.vm-filter-btn:hover{border-color:var(--purple);color:var(--text)}
+.vm-filter-btn.active{border-color:var(--purple);color:#c084fc;background:rgba(168,85,247,.15)}
+.vm-filter-btn.active-site{border-color:var(--ok);color:var(--ok);background:rgba(0,229,160,.1)}
+.vm-count{font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--dim);margin-left:auto;white-space:nowrap}
 .vm-add-form{display:none;background:rgba(16,26,46,.6);border:1px solid rgba(168,85,247,.35);border-radius:8px;padding:12px;margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .vm-add-form.hidden{display:none!important}
 .vm-field{display:flex;flex-direction:column;gap:4px}
@@ -878,6 +900,16 @@ opacity:1
       <div class="vm-field"><label>OS</label><input id="vf-os" type="text" placeholder="เช่น Ubuntu 22.04 / Windows Server 2022"/></div>
       <div class="vm-field"><label>IP ADDRESS</label><input id="vf-ip" type="text" placeholder="เช่น 172.31.40.10"/></div>
       <div class="vm-field"><label>HOSTNAME</label><input id="vf-hostname" type="text" placeholder="เช่น web-srv-01"/></div>
+      <div class="vm-field"><label>SITE</label><select id="vf-site" style="background:#091220;border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.78rem;padding:6px 10px;outline:none">
+        <option value="">— เลือก Site —</option>
+        <option value="Management">Management</option>
+        <option value="Old Cluster">Old Cluster</option>
+        <option value="Site A (DC)">Site A (DC)</option>
+        <option value="Site B (MM)">Site B (MM)</option>
+        <option value="Site C (DR)">Site C (DR)</option>
+        <option value="Backup">Backup</option>
+        <option value="Other">Other</option>
+      </select></div>
       <div class="vm-field full"><label>FUNCTION / ROLE / หมายเหตุ</label><textarea id="vf-func" placeholder="เช่น Web Server สำหรับทดสอบ HTTP load balancing | iLO: 172.31.10.50 | Login: admin/password"></textarea></div>
       <input type="hidden" id="vf-edit-id"/>
       <div class="vm-form-actions">
@@ -2640,69 +2672,69 @@ function _fbSetStatus(s){
 }
 // ── VM Inventory ────────────────────────────────────────────────────────────
 let vmInventory=[];
-const VM_LS_KEY='poc_vm_inventory_v2';
+const VM_LS_KEY='poc_vm_inventory_v3';
 function _vmGenId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 const VM_SEED=[
   /* ── Old Cluster ────────────────────────────────────────── */
-  {id:'seed-01',name:'old-hpe-esxi-01',hostname:'old-hpe-esxi-01',
+  {id:'seed-01',name:'old-hpe-esxi-01',hostname:'old-hpe-esxi-01',site:'Old Cluster',
    os:'VMware ESXi 8 (HPE DL360 Gen10)',ip:'172.31.10.2',
    func:'Host ระบบเดิม Old Cluster (MM) | iLO: 172.31.10.50 | Login: root / NTT@dm1n2026'},
-  {id:'seed-ilo-old',name:'old-hpe-esxi-01-iLO',hostname:'old-hpe-esxi-01-ilo',
+  {id:'seed-ilo-old',name:'old-hpe-esxi-01-iLO',hostname:'old-hpe-esxi-01-ilo',site:'Old Cluster',
    os:'HPE iLO',ip:'172.31.10.50',
    func:'iLO Management — Old Cluster ESXi (HPE DL360 Gen10) | Login: hpeadmin / P@ssw0rd | Subnet: 255.255.255.0 | GW: 172.31.10.254'},
-  {id:'seed-02',name:'vcenter-old-01',hostname:'vcenter-old-01',
+  {id:'seed-02',name:'vcenter-old-01',hostname:'vcenter-old-01',site:'Old Cluster',
    os:'VMware vCenter 8',ip:'172.31.10.1',
    func:'vCenter Old Cluster — ต้นทางการย้ายระบบ | Login: root / NTT@dm1n2026'},
-  {id:'seed-dns',name:'dc-01',hostname:'dc-01',
+  {id:'seed-dns',name:'dc-01',hostname:'dc-01',site:'Management',
    os:'Windows Server',ip:'172.31.10.3',
    func:'DNS / Domain Controller | Domain: egat.local | Login: root / NTT@dm1n2026'},
   /* ── vCenter HA ─────────────────────────────────────────── */
-  {id:'seed-03',name:'vcenter-new-01 (Active)',hostname:'vcenter-new-01',
+  {id:'seed-03',name:'vcenter-new-01 (Active)',hostname:'vcenter-new-01',site:'Management',
    os:'VMware vCenter 8',ip:'172.31.10.5',
    func:'vCenter HA Active Node — New Cluster'},
-  {id:'seed-04',name:'vcenter-new-01 (Passive)',hostname:'vcenter-new-01',
+  {id:'seed-04',name:'vcenter-new-01 (Passive)',hostname:'vcenter-new-01',site:'Management',
    os:'VMware vCenter 8',ip:'172.31.10.6',
    func:'vCenter HA Passive Node — New Cluster'},
-  {id:'seed-05',name:'vcenter-new-01 (Witness)',hostname:'vcenter-new-01',
+  {id:'seed-05',name:'vcenter-new-01 (Witness)',hostname:'vcenter-new-01',site:'Management',
    os:'VMware vCenter 8',ip:'172.31.10.7',
    func:'vCenter HA Witness Node'},
   /* ── New Cluster Hosts ──────────────────────────────────── */
-  {id:'seed-06',name:'site-a-esxi-01',hostname:'site-a-esxi-01',
+  {id:'seed-06',name:'site-a-esxi-01',hostname:'site-a-esxi-01',site:'Site A (DC)',
    os:'VMware ESXi 8',ip:'172.31.10.10',
    func:'VMware Host 1 — Site A DC | HDM: 172.31.10.110'},
-  {id:'seed-07',name:'site-a-esxi-02',hostname:'site-a-esxi-02',
+  {id:'seed-07',name:'site-a-esxi-02',hostname:'site-a-esxi-02',site:'Site A (DC)',
    os:'VMware ESXi 8',ip:'172.31.10.11',
    func:'VMware Host 2 — Site A DC | HDM: 172.31.10.111'},
-  {id:'seed-08',name:'site-a-esxi-03',hostname:'site-a-esxi-03',
+  {id:'seed-08',name:'site-a-esxi-03',hostname:'site-a-esxi-03',site:'Site A (DC)',
    os:'VMware ESXi 8',ip:'172.31.10.12',
    func:'VMware Host 3 — Site A DC | HDM: 172.31.10.112'},
-  {id:'seed-09',name:'site-b-esxi-01',hostname:'site-b-esxi-01',
+  {id:'seed-09',name:'site-b-esxi-01',hostname:'site-b-esxi-01',site:'Site B (MM)',
    os:'VMware ESXi 8',ip:'172.31.10.13',
    func:'VMware Host 4 — Site B MM | IMM: 172.31.10.113'},
-  {id:'seed-10',name:'site-c-esxi-01',hostname:'site-c-esxi-01',
+  {id:'seed-10',name:'site-c-esxi-01',hostname:'site-c-esxi-01',site:'Site C (DR)',
    os:'VMware ESXi 8',ip:'172.31.10.14',
    func:'VMware Host 5 — Site C DR | HDM: 172.31.10.114 | Login: admin / Password@_'},
   /* ── Backup ─────────────────────────────────────────────── */
-  {id:'seed-11',name:'backup-srv-01',hostname:'backup-srv-01',
+  {id:'seed-11',name:'backup-srv-01',hostname:'backup-srv-01',site:'Backup',
    os:'Windows Server / Linux',ip:'172.31.10.15',
    func:'Backup Server / Proxy / Repository'},
-  {id:'seed-12',name:'nas-01',hostname:'nas-01',
+  {id:'seed-12',name:'nas-01',hostname:'nas-01',site:'Backup',
    os:'NAS OS',ip:'172.31.10.16',
    func:'Backup Storage — NAS Repository'},
   /* ── Production VMs (VLAN 40) ───────────────────────────── */
-  {id:'seed-vm2',name:'VM2',hostname:'vm2',
+  {id:'seed-vm2',name:'VM2',hostname:'vm2',site:'Site A (DC)',
    os:'Linux Red Hat',ip:'172.31.40.2',
    func:'Production VM — Red Hat Linux | Subnet: 255.255.255.0 | GW: 172.31.40.254'},
-  {id:'seed-vm3',name:'VM3',hostname:'vm3',
+  {id:'seed-vm3',name:'VM3',hostname:'vm3',site:'Site A (DC)',
    os:'Linux Debian',ip:'172.31.40.3',
    func:'Production VM — Debian Linux | Subnet: 255.255.255.0 | GW: 172.31.40.254'},
-  {id:'seed-vm4',name:'VM4',hostname:'vm4',
+  {id:'seed-vm4',name:'VM4',hostname:'vm4',site:'Site A (DC)',
    os:'Linux CentOS',ip:'172.31.40.4',
    func:'Production VM — CentOS Linux | Subnet: 255.255.255.0 | GW: 172.31.40.254'},
-  {id:'seed-vm5',name:'VM5',hostname:'vm5',
+  {id:'seed-vm5',name:'VM5',hostname:'vm5',site:'Site A (DC)',
    os:'Linux Ubuntu',ip:'172.31.40.5',
    func:'Production VM — Ubuntu Linux | Subnet: 255.255.255.0 | GW: 172.31.40.254'},
-].map(v=>({...v,updatedAt:1700000000001}));
+].map(v=>({...v,updatedAt:1700000000002}));
 function loadVmLocal(){
   try{vmInventory=JSON.parse(localStorage.getItem(VM_LS_KEY)||'[]')||[];}catch(e){vmInventory=[];}
   if(!vmInventory.length){vmInventory=[...VM_SEED];saveVmLocal();_fbPushVm();}
@@ -2735,6 +2767,12 @@ function cancelVmForm(){
   f.classList.add('hidden');
   ['vf-name','vf-os','vf-ip','vf-hostname','vf-func','vf-edit-id'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
+let _vmSearch='',_vmFilterOs=null,_vmFilterSite=null,_vmSortIp=null;
+function _ipToNum(ip){const p=(ip||'').split('.').map(Number);return((p[0]||0)<<24)|((p[1]||0)<<16)|((p[2]||0)<<8)|(p[3]||0);}
+function _siteCls(site){
+  const m={'Old Cluster':'old','Site A (DC)':'siteA','Site B (MM)':'siteB','Site C (DR)':'siteC','Management':'mgmt','Backup':'backup'};
+  return m[site]||'other';
+}
 function saveVmEntry(){
   const name=(document.getElementById('vf-name').value||'').trim();
   if(!name){document.getElementById('vf-name').focus();return;}
@@ -2744,6 +2782,7 @@ function saveVmEntry(){
     os:(document.getElementById('vf-os').value||'').trim(),
     ip:(document.getElementById('vf-ip').value||'').trim(),
     hostname:(document.getElementById('vf-hostname').value||'').trim(),
+    site:(document.getElementById('vf-site').value||'').trim(),
     func:(document.getElementById('vf-func').value||'').trim(),
     updatedAt:Date.now()
   };
@@ -2763,30 +2802,65 @@ function editVm(id){
   document.getElementById('vf-os').value=v.os||'';
   document.getElementById('vf-ip').value=v.ip||'';
   document.getElementById('vf-hostname').value=v.hostname||'';
+  document.getElementById('vf-site').value=v.site||'';
   document.getElementById('vf-func').value=v.func||'';
   document.getElementById('vmAddForm').classList.remove('hidden');
   document.getElementById('vf-name').focus();
 }
 function renderVmTable(){
   const wrap=document.getElementById('vmTableWrap');if(!wrap)return;
-  if(!vmInventory.length){
-    wrap.innerHTML='<div class="vm-empty">ยังไม่มี VM — กด "+ Add VM" เพื่อเพิ่ม</div>';return;
-  }
-  wrap.innerHTML=`<table class="vm-table">
-    <thead><tr><th>#</th><th>VM NAME</th><th>HOSTNAME</th><th>OS</th><th>IP ADDRESS</th><th>FUNCTION / ROLE</th><th></th></tr></thead>
-    <tbody>${vmInventory.map((v,i)=>`<tr>
-      <td style="color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:.68rem">${i+1}</td>
-      <td style="font-family:'Share Tech Mono',monospace;color:var(--ok)">${esc(v.name)}</td>
-      <td style="font-family:'Share Tech Mono',monospace;font-size:.76rem">${esc(v.hostname||'—')}</td>
-      <td><span class="vm-os-tag">${esc(v.os||'—')}</span></td>
-      <td style="font-family:'Share Tech Mono',monospace;color:var(--info)">${esc(v.ip||'—')}</td>
-      <td style="font-size:.8rem;color:var(--dim)">${esc(v.func||'—')}</td>
+  // filter
+  let list=[...vmInventory];
+  if(_vmSearch){const q=_vmSearch.toLowerCase();list=list.filter(v=>[v.name,v.hostname,v.ip,v.os,v.site,v.func].some(f=>(f||'').toLowerCase().includes(q)));}
+  if(_vmFilterOs)list=list.filter(v=>v.os===_vmFilterOs);
+  if(_vmFilterSite)list=list.filter(v=>v.site===_vmFilterSite);
+  // sort by IP
+  if(_vmSortIp==='asc')list.sort((a,b)=>_ipToNum(a.ip)-_ipToNum(b.ip));
+  else if(_vmSortIp==='desc')list.sort((a,b)=>_ipToNum(b.ip)-_ipToNum(a.ip));
+  // unique OS & Site for filter buttons
+  const allOs=[...new Set(vmInventory.map(v=>v.os).filter(Boolean))].sort();
+  const allSites=[...new Set(vmInventory.map(v=>v.site).filter(Boolean))];
+  const siteOrder=['Management','Old Cluster','Site A (DC)','Site B (MM)','Site C (DR)','Backup','Other'];
+  allSites.sort((a,b)=>(siteOrder.indexOf(a)+1||99)-(siteOrder.indexOf(b)+1||99));
+  const ipIcon=_vmSortIp==='asc'?'↑':_vmSortIp==='desc'?'↓':'↕';
+  const ipCls=_vmSortIp?`sort-${_vmSortIp}`:'';
+  wrap.innerHTML=`
+  <div class="vm-toolbar">
+    <input class="vm-search" type="text" placeholder="🔍  ค้นหา name / IP / OS / site..." value="${esc(_vmSearch)}" oninput="_vmSearch=this.value;renderVmTable()"/>
+    <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap">SITE:</span>
+    <button class="vm-filter-btn${_vmFilterSite?'':' active-site'}" onclick="_vmFilterSite=null;renderVmTable()">ALL</button>
+    ${allSites.map(s=>`<button class="vm-filter-btn${_vmFilterSite===s?' active-site':''}" onclick="_vmFilterSite=${_vmFilterSite===s?'null':`'${s}'`};renderVmTable()">${esc(s)}</button>`).join('')}
+    <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap;margin-left:4px">OS:</span>
+    <button class="vm-filter-btn${!_vmFilterOs?' active':''}" onclick="_vmFilterOs=null;renderVmTable()">ALL</button>
+    ${allOs.map(o=>`<button class="vm-filter-btn${_vmFilterOs===o?' active':''}" onclick="_vmFilterOs=${_vmFilterOs===o?'null':`'${o.replace(/'/g,"\\'")}'`};renderVmTable()">${esc(o)}</button>`).join('')}
+    <span class="vm-count">${list.length} / ${vmInventory.length} รายการ</span>
+  </div>
+  ${!list.length?'<div class="vm-empty">ไม่พบรายการที่ตรงกับการค้นหา</div>':`
+  <table class="vm-table">
+    <thead><tr>
+      <th style="width:36px">#</th>
+      <th>VM / NODE NAME</th>
+      <th>HOSTNAME</th>
+      <th>SITE</th>
+      <th>OS</th>
+      <th class="sortable ${ipCls}" onclick="_vmSortIp=_vmSortIp==='asc'?'desc':_vmSortIp==='desc'?null:'asc';renderVmTable()">IP ADDRESS <span class="sort-icon">${ipIcon}</span></th>
+      <th>FUNCTION / ROLE</th>
+      <th style="width:68px"></th>
+    </tr></thead>
+    <tbody>${list.map((v,i)=>`<tr>
+      <td style="color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:.65rem;text-align:center">${i+1}</td>
+      <td style="font-family:'Share Tech Mono',monospace;color:var(--ok);font-size:.76rem">${esc(v.name)}</td>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--dim)">${esc(v.hostname||'—')}</td>
+      <td><span class="vm-site-tag ${_siteCls(v.site)}">${esc(v.site||'—')}</span></td>
+      <td><span class="vm-os-tag" onclick="_vmFilterOs=_vmFilterOs==='${v.os.replace(/'/g,"\\'")}'?null:'${v.os.replace(/'/g,"\\'")}';renderVmTable()" title="คลิกเพื่อ filter OS นี้">${esc(v.os||'—')}</span></td>
+      <td style="font-family:'Share Tech Mono',monospace;color:var(--info);font-size:.76rem">${esc(v.ip||'—')}</td>
+      <td style="font-size:.76rem;color:var(--dim);max-width:320px;word-break:break-word">${esc(v.func||'—')}</td>
       <td style="white-space:nowrap">
         <button class="vm-icon-btn edit" onclick="editVm('${v.id}')" title="Edit">✎</button>
         <button class="vm-icon-btn del" onclick="deleteVm('${v.id}')" title="Delete">✕</button>
       </td>
     </tr>`).join('')}</tbody>
-  </table>`;
+  </table>`}`;
 }
 // ────────────────────────────────────────────────────────────────────────────
 function _fbStartSync(){
