@@ -2786,12 +2786,30 @@ function loadVmLocal(){
   if(!vmInventory.length){vmInventory=[...VM_SEED];saveVmLocal();_fbPushVm();}
 }
 function saveVmLocal(){try{localStorage.setItem(VM_LS_KEY,JSON.stringify(vmInventory));}catch(e){}}
+function _updateOsDropdown(){
+  const osSelect=document.getElementById('vf-os');if(!osSelect)return;
+  const allOs=[...new Set(vmInventory.map(v=>v.os).filter(Boolean))].sort();
+  const baseHtml=`<option value="">— Select or add new —</option>${allOs.map(o=>`<option value="${o.replace(/"/g,'&quot;')}">${esc(o)}</option>`).join('')}<option value="__new__">+ Add New OS...</option>`;
+  osSelect.innerHTML=baseHtml;
+  osSelect.onchange=function(){
+    if(this.value==='__new__'){
+      const newOs=prompt('Enter new OS name:','');
+      if(newOs&&newOs.trim()){
+        this.value=newOs.trim();
+        document.getElementById('vf-os').value=newOs.trim();
+      }else{
+        this.value='';
+      }
+    }
+  };
+}
 function openVmInventory(){
   // hide all other pages
   document.getElementById('pg-landing').style.display='none';
   document.getElementById('pg-sim').style.display='none';
   document.getElementById('pg-vm').style.display='flex';
   if(!_vmSortIp)_vmSortIp='asc';  // default sort by IP ascending
+  _updateOsDropdown();
   renderVmTable();
 }
 function closeVmInventory(){
@@ -2824,7 +2842,7 @@ function loadVmTrash(){try{vmTrash=JSON.parse(localStorage.getItem(VM_TRASH_KEY)
 function saveVmTrash(){try{localStorage.setItem(VM_TRASH_KEY,JSON.stringify(vmTrash));}catch(e){}}
 function _purgeExpiredTrash(){
   const now=Date.now();
-  vmTrash=vmTrash.filter(t=>(now-t.deletedAt)<3600000);  // 1 hour = 3600000ms
+  vmTrash=vmTrash.filter(t=>(now-t.deletedAt)<86400000);  // 24 hours = 86400000ms
   saveVmTrash();
 }
 const VM_VLANS=[
@@ -2885,13 +2903,13 @@ function confirmDelete(){
 function openTrashModal(){
   _purgeExpiredTrash();
   const html=vmTrash.length?vmTrash.map(t=>{
-    const expiresMsLeft=3600000-(Date.now()-t.deletedAt);
-    const expiresMin=Math.ceil(expiresMsLeft/60000);
+    const expiresMsLeft=86400000-(Date.now()-t.deletedAt);
+    const expiresHr=Math.ceil(expiresMsLeft/3600000);
     return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:rgba(16,26,46,.8);border:1px solid rgba(199,23,23,.3);border-radius:6px">
       <div style="flex:1">
         <div style="font-family:'Share Tech Mono',monospace;color:var(--ok);font-size:.8rem;font-weight:600">${esc(t.name)}</div>
         <div style="font-size:.72rem;color:var(--dim);margin-top:4px">${esc(t.ip||'—')} • ${esc(t.site||'—')}</div>
-        <div style="font-size:.65rem;color:var(--danger);margin-top:4px">Expires in ${expiresMin} min</div>
+        <div style="font-size:.65rem;color:var(--danger);margin-top:4px">Expires in ${expiresHr} hour${expiresHr>1?'s':''}</div>
       </div>
       <button class="vm-btn" style="border-color:rgba(0,229,160,.5);background:rgba(0,229,160,.1);color:#00e5a0;padding:6px 12px;font-size:.72rem;white-space:nowrap" onclick="undoDelete('${t.id}');renderVmTable();openTrashModal()">↶ UNDO</button>
     </div>`;
@@ -2968,7 +2986,6 @@ function renderVmTable(){
       ${VM_VLANS.map(v=>`<button class="vm-filter-btn${_vmFilterSubnet===v.id?' active-site':''}" onclick="_vmFilterSubnet=_vmFilterSubnet==='${v.id}'?null:'${v.id}';renderVmTable()" title="${v.desc} ${v.range}">${v.name}</button>`).join('')}
     </div>
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">
-      ${vmTrash.length>0?`<button class="vm-filter-btn" style="border-color:var(--danger);color:var(--danger);background:rgba(255,51,85,.1);padding:6px 12px;font-size:.76rem" onclick="openTrashModal()" title="Trash (${vmTrash.length} items)">🗑 UNDO (${vmTrash.length})</button>`:''}
       <button class="vm-filter-btn" style="border-color:var(--danger);color:var(--danger);border-width:2px;padding:7px 16px;font-size:.78rem;font-weight:600;letter-spacing:1px" onclick="_vmSearch='';document.getElementById('vmSearchInput').value='';_vmFilterOs=null;_vmFilterSite=null;_vmFilterSubnet=null;renderVmTable()" title="ล้างทุกการค้นหาและกรอง">✕ CLEAR FILTER</button>
     </div>
   </div>
@@ -2976,12 +2993,12 @@ function renderVmTable(){
     <button class="vm-btn add" onclick="toggleVmForm()" style="font-size:.85rem;padding:8px 18px">＋ NEW REGISTER</button>
   </div>
   <div id="vmFormContainer" class="vm-add-form hidden">
-    <div class="vm-field" style="grid-column:1"><label style="font-size:.62rem">NAME</label><input id="vf-name" type="text" placeholder="vm-web-01" style="width:100%;font-size:.75rem;padding:5px 8px"/></div>
-    <div class="vm-field" style="grid-column:2"><label style="font-size:.62rem">HOSTNAME</label><input id="vf-hostname" type="text" placeholder="web-srv-01" style="width:100%;font-size:.75rem;padding:5px 8px"/></div>
+    <div class="vm-field" style="grid-column:1"><label style="font-size:.62rem">NAME</label><input id="vf-name" type="text" style="width:100%;font-size:.75rem;padding:5px 8px"/></div>
+    <div class="vm-field" style="grid-column:2"><label style="font-size:.62rem">HOSTNAME</label><input id="vf-hostname" type="text" style="width:100%;font-size:.75rem;padding:5px 8px"/></div>
     <div class="vm-field" style="grid-column:3"><label style="font-size:.62rem">SITE</label><select id="vf-site" style="background:#091220;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:5px 6px;outline:none;width:100%"><option value="">— Site —</option><option value="Management">Management</option><option value="Old Cluster">Old Cluster</option><option value="Site A (DC)">Site A (DC)</option><option value="Site B (MM)">Site B (MM)</option><option value="Site C (DR)">Site C (DR)</option><option value="Backup">Backup</option><option value="Other">Other</option></select></div>
-    <div class="vm-field" style="grid-column:4"><label style="font-size:.62rem">OS</label><input id="vf-os" type="text" placeholder="Ubuntu 22.04" style="width:100%;font-size:.75rem;padding:5px 8px"/></div>
-    <div class="vm-field" style="grid-column:5"><label style="font-size:.62rem">IP</label><input id="vf-ip" type="text" placeholder="172.31.40.10" style="width:100%;font-size:.75rem;padding:5px 8px"/></div>
-    <div class="vm-field" style="grid-column:6"><label style="font-size:.62rem">FUNCTION / ROLE</label><input id="vf-func" type="text" placeholder="Web Server..." style="width:100%;font-size:.75rem;padding:5px 8px"/></div>
+    <div class="vm-field" style="grid-column:4"><label style="font-size:.62rem">OS</label><select id="vf-os" style="background:#091220;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:5px 6px;outline:none;width:100%;max-width:100%"><option value="">— Select or add new —</option></select></div>
+    <div class="vm-field" style="grid-column:5"><label style="font-size:.62rem">IP</label><input id="vf-ip" type="text" style="width:100%;font-size:.75rem;padding:5px 8px"/></div>
+    <div class="vm-field" style="grid-column:6"><label style="font-size:.62rem">FUNCTION / ROLE</label><input id="vf-func" type="text" style="width:100%;font-size:.75rem;padding:5px 8px"/></div>
     <input type="hidden" id="vf-edit-id"/>
     <div style="grid-column:7;display:flex;gap:4px">
       <button class="vm-btn cancel" onclick="cancelVmForm()" style="padding:5px 10px;font-size:.65rem">CANCEL</button>
@@ -3013,7 +3030,8 @@ function renderVmTable(){
         <button class="vm-icon-btn del" onclick="deleteVm('${v.id}')" title="Delete">✕</button>
       </td>
     </tr>`).join('')}</tbody>
-  </table>`}`;
+  </table>${vmTrash.length>0?`<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="vm-filter-btn" style="border-color:var(--danger);color:var(--danger);background:rgba(255,51,85,.12);padding:6px 12px;font-size:.75rem" onclick="openTrashModal()" title="Trash (${vmTrash.length} items — expires in 24 hours)">🗑 UNDO (${vmTrash.length})</button></div>`:''}
+  `}`;
 }
 // ────────────────────────────────────────────────────────────────────────────
 function _fbStartSync(){
