@@ -895,7 +895,9 @@ opacity:1
     <div class="vm-page-head">
       <div style="font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--dim);letter-spacing:1px">รายการ Node / VM ทั้งหมดใน POC Environment — sync real-time ทุก session</div>
     </div>
-    <!-- Add/Edit Form -->
+    <!-- Table & Controls -->
+    <div id="vmTableWrap"></div>
+    <!-- Add/Edit Form (positioned after search filters) -->
     <div id="vmAddForm" class="vm-add-form hidden">
       <div class="vm-field"><label>VM NAME</label><input id="vf-name" type="text" placeholder="เช่น vm-web-01"/></div>
       <div class="vm-field"><label>OS</label><input id="vf-os" type="text" placeholder="เช่น Ubuntu 22.04 / Windows Server 2022"/></div>
@@ -918,8 +920,6 @@ opacity:1
         <button class="vm-btn save" onclick="saveVmEntry()">&#10003; SAVE</button>
       </div>
     </div>
-    <!-- Table -->
-    <div id="vmTableWrap"></div>
   </div>
 
   <!-- Delete Confirmation Modal -->
@@ -2802,6 +2802,15 @@ function cancelVmForm(){
   ['vf-name','vf-os','vf-ip','vf-hostname','vf-func','vf-edit-id'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
 let _vmSearch='',_vmFilterOs=null,_vmFilterSite=null,_vmFilterSubnet=null,_vmSortIp=null,_vmSortName=null,_vmSearchTimer=null;
+let vmTrash=[];
+const VM_TRASH_KEY='poc_vm_trash_v1';
+function loadVmTrash(){try{vmTrash=JSON.parse(localStorage.getItem(VM_TRASH_KEY)||'[]')||[];}catch(e){vmTrash=[];}}
+function saveVmTrash(){try{localStorage.setItem(VM_TRASH_KEY,JSON.stringify(vmTrash));}catch(e){}}
+function _purgeExpiredTrash(){
+  const now=Date.now();
+  vmTrash=vmTrash.filter(t=>(now-t.deletedAt)<3600000);  // 1 hour = 3600000ms
+  saveVmTrash();
+}
 const VM_VLANS=[
   {id:'v10',name:'VLAN 10',desc:'Management',range:'172.31.10.0/24'},
   {id:'v20',name:'VLAN 20',desc:'vMotion',range:'172.31.20.0/24'},
@@ -2850,9 +2859,18 @@ function closeDeleteModal(){
 function vmDeleteBackdrop(e){if(e.target.id==='vmDeleteModal')closeDeleteModal();}
 function confirmDelete(){
   if(!_vmDeleteId)return;
+  const vm=vmInventory.find(v=>v.id===_vmDeleteId);if(!vm)return;
   vmInventory=vmInventory.filter(v=>v.id!==_vmDeleteId);
-  saveVmLocal();_fbPushVm();renderVmTable();
+  vmTrash.push({...vm,deletedAt:Date.now()});
+  _purgeExpiredTrash();
+  saveVmLocal();saveVmTrash();_fbPushVm();renderVmTable();
   closeDeleteModal();
+}
+function undoDelete(id){
+  const item=vmTrash.find(t=>t.id===id);if(!item)return;
+  vmTrash=vmTrash.filter(t=>t.id!==id);
+  vmInventory.push(item);
+  saveVmTrash();saveVmLocal();_fbPushVm();renderVmTable();
 }
 function editVm(id){
   const v=vmInventory.find(x=>x.id===id);if(!v)return;
@@ -2946,7 +2964,17 @@ function renderVmTable(){
         <button class="vm-icon-btn del" onclick="deleteVm('${v.id}')" title="Delete">✕</button>
       </td>
     </tr>`).join('')}</tbody>
-  </table>`}`;
+  </table>${vmTrash.length>0?`
+  <div style="margin-top:20px;padding:12px;background:rgba(199,23,23,.08);border:1px solid rgba(199,23,23,.25);border-radius:8px">
+    <div style="font-family:'Share Tech Mono',monospace;font-size:.68rem;color:var(--danger);margin-bottom:10px;letter-spacing:1px">🗑 TRASH (${vmTrash.length} items) — expires in 1 hour</div>
+    <div style="display:grid;gap:6px">
+      ${vmTrash.map(t=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:rgba(16,26,46,.7);border:1px solid rgba(199,23,23,.2);border-radius:4px;font-size:.76rem">
+        <span><span style="color:var(--ok);font-family:'Share Tech Mono',monospace">${esc(t.name)}</span> (${esc(t.ip||'—')})</span>
+        <button class="vm-btn" style="border-color:rgba(0,229,160,.5);background:rgba(0,229,160,.1);color:#00e5a0;padding:4px 10px;font-size:.7rem" onclick="undoDelete('${t.id}')" title="Restore this item">↶ UNDO</button>
+      </div>`).join('')}
+    </div>
+  </div>`:''}
+  `}`;
 }
 // ────────────────────────────────────────────────────────────────────────────
 function _fbStartSync(){
@@ -3016,7 +3044,7 @@ function _fbApply(data){
 }
 // ────────────────────────────────────────────────────────────────────────────
 window.onload=()=>{
-  loadDiagramSettings();loadStepStatuses();loadStepNotes();loadVmLocal();applyDiagramSettings();
+  loadDiagramSettings();loadStepStatuses();loadStepNotes();loadVmLocal();loadVmTrash();applyDiagramSettings();
   const session=loadSession();
   if(session&&session.part&&cases[session.part])selectMode(session.part);
   else selectMode('hyper');
