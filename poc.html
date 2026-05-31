@@ -3026,7 +3026,7 @@ function renderVmTable(){
       <button class="vm-filter-btn${_vmFilterType==='Physical'?' active':''}" style="${_vmFilterType==='Physical'?'border-color:#ff9a4a;color:#ff9a4a;background:rgba(255,107,0,.12)':''}" onclick="_vmFilterType=_vmFilterType==='Physical'?null:'Physical';renderVmTable()">Physical</button>
     </div>
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">
-      <button class="vm-filter-btn" style="border-color:var(--danger);color:var(--danger);border-width:2px;padding:7px 16px;font-size:.78rem;font-weight:600;letter-spacing:1px" onclick="_vmSearch='';document.getElementById('vmSearchInput').value='';_vmFilterOs=null;_vmFilterSite=null;_vmFilterSubnet=null;renderVmTable()" title="ล้างทุกการค้นหาและกรอง">✕ CLEAR FILTER</button>
+      <button class="vm-filter-btn" style="border-color:var(--danger);color:var(--danger);border-width:2px;padding:7px 16px;font-size:.78rem;font-weight:600;letter-spacing:1px" onclick="_vmSearch='';document.getElementById('vmSearchInput').value='';_vmFilterOs=null;_vmFilterSite=null;_vmFilterSubnet=null;_vmFilterType=null;renderVmTable()" title="ล้างทุกการค้นหาและกรอง">✕ CLEAR FILTER</button>
     </div>
   </div>
   <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:16px 0">
