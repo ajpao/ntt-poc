@@ -854,7 +854,6 @@ const cases={
 };
 let selected=null,currentPart=null,currentCase=null,running=false;
 let currentStepFilter='all',celebTimer=null;
-let _fbWritesInFlight=0;
 // ── Firebase Realtime Database ──────────────────────────────────────────────
 const _fbConfig={
   apiKey:"AIzaSyB1tDvD2NLYCyxQqA_WxKNF6LnTWUfVtEM",
@@ -881,10 +880,7 @@ let stepNotesStore={};
 const openNoteKeys=new Set();
 function loadStepNotes(){/* handled by Firebase onValue */}
 function saveStepNotes(){
-  _fbWritesInFlight++;
-  _fbRef.child('stepNotes').set(JSON.stringify(stepNotesStore))
-    .then(()=>_fbWritesInFlight=Math.max(0,_fbWritesInFlight-1))
-    .catch(e=>{_fbWritesInFlight=Math.max(0,_fbWritesInFlight-1);console.error('FB:notes',e);});
+  _fbRef.child('stepNotes').set(JSON.stringify(stepNotesStore)).catch(e=>console.error('FB:notes',e));
 }
 function getNote(index){
   const key=caseKey();
@@ -979,10 +975,7 @@ function toggleNote(index){
 function nowTs(){return new Date().toLocaleTimeString('th-TH',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});}
 function loadStepStatuses(){/* handled by Firebase onValue */}
 function saveStepStatuses(){
-  _fbWritesInFlight++;
-  _fbRef.child('stepStatuses').set(JSON.stringify(stepStatusStore))
-    .then(()=>_fbWritesInFlight=Math.max(0,_fbWritesInFlight-1))
-    .catch(e=>{_fbWritesInFlight=Math.max(0,_fbWritesInFlight-1);console.error('FB:status',e);});
+  _fbRef.child('stepStatuses').set(JSON.stringify(stepStatusStore)).catch(e=>console.error('FB:status',e));
 }
 function caseKey(){
   return currentPart&&currentCase?`${currentPart}:${currentCase.id}`:'';
@@ -2563,7 +2556,7 @@ function updateNoteUIFromStore(){
 function startFirebaseSync(){
   setSyncStatus('connecting');
   _fbRef.on('value',snap=>{
-    if(running||_fbWritesInFlight>0)return; // skip while simulating or writes pending
+    if(running)return; // skip while simulation is running
     const data=snap.val()||{};
     if(data.stepStatuses){try{stepStatusStore=JSON.parse(data.stepStatuses)||{};}catch(e){}}
     if(data.stepNotes){try{stepNotesStore=JSON.parse(data.stepNotes)||{};}catch(e){}}
