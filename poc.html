@@ -2791,14 +2791,17 @@ function closeVmInventory(){
 }
 function vmModalBackdrop(){}
 function toggleVmForm(){
-  const f=document.getElementById('vmAddForm');
+  let f=document.getElementById('vmFormContainer');
+  if(!f)f=document.getElementById('vmAddForm');
+  if(!f)return;
   const hidden=f.classList.contains('hidden');
-  if(hidden){f.classList.remove('hidden');document.getElementById('vf-name').focus();}
+  if(hidden){f.classList.remove('hidden');setTimeout(()=>document.getElementById('vf-name')?.focus(),100);}
   else cancelVmForm();
 }
 function cancelVmForm(){
-  const f=document.getElementById('vmAddForm');
-  f.classList.add('hidden');
+  let f=document.getElementById('vmFormContainer');
+  if(!f)f=document.getElementById('vmAddForm');
+  if(f)f.classList.add('hidden');
   ['vf-name','vf-os','vf-ip','vf-hostname','vf-func','vf-edit-id'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
 let _vmSearch='',_vmFilterOs=null,_vmFilterSite=null,_vmFilterSubnet=null,_vmSortIp=null,_vmSortName=null,_vmSearchTimer=null;
@@ -2938,6 +2941,28 @@ function renderVmTable(){
   </div>
   <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:16px 0">
     <button class="vm-btn add" onclick="toggleVmForm()" style="font-size:.85rem;padding:8px 18px">＋ NEW REGISTER</button>
+  </div>
+  <div id="vmFormContainer" class="vm-add-form hidden" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="vm-field"><label>VM NAME</label><input id="vf-name" type="text" placeholder="เช่น vm-web-01"/></div>
+    <div class="vm-field"><label>OS</label><input id="vf-os" type="text" placeholder="เช่น Ubuntu 22.04 / Windows Server 2022"/></div>
+    <div class="vm-field"><label>IP ADDRESS</label><input id="vf-ip" type="text" placeholder="เช่น 172.31.40.10"/></div>
+    <div class="vm-field"><label>HOSTNAME</label><input id="vf-hostname" type="text" placeholder="เช่น web-srv-01"/></div>
+    <div class="vm-field"><label>SITE</label><select id="vf-site" style="background:#091220;border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.78rem;padding:6px 10px;outline:none">
+      <option value="">— เลือก Site —</option>
+      <option value="Management">Management</option>
+      <option value="Old Cluster">Old Cluster</option>
+      <option value="Site A (DC)">Site A (DC)</option>
+      <option value="Site B (MM)">Site B (MM)</option>
+      <option value="Site C (DR)">Site C (DR)</option>
+      <option value="Backup">Backup</option>
+      <option value="Other">Other</option>
+    </select></div>
+    <div class="vm-field full"><label>FUNCTION / ROLE / หมายเหตุ</label><textarea id="vf-func" placeholder="เช่น Web Server สำหรับทดสอบ HTTP load balancing | iLO: 172.31.10.50 | Login: admin/password"></textarea></div>
+    <input type="hidden" id="vf-edit-id"/>
+    <div class="vm-form-actions">
+      <button class="vm-btn cancel" onclick="cancelVmForm()">CANCEL</button>
+      <button class="vm-btn save" onclick="saveVmEntry()">&#10003; SAVE</button>
+    </div>
   </div>
   ${!list.length?'<div class="vm-empty">ไม่พบรายการที่ตรงกับการค้นหา</div>':`
   <table class="vm-table">
