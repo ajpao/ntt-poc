@@ -2861,8 +2861,9 @@ function openVmInventory(){
   document.getElementById('pg-sim').style.display='none';
   document.getElementById('pg-vm').style.display='flex';
   if(!_vmSortIp)_vmSortIp='asc';  // default sort by IP ascending
-  _updateOsDropdown();
   renderVmTable();
+  // Setup OS dropdown after form is rendered
+  setTimeout(()=>_updateOsDropdown(),100);
 }
 function closeVmInventory(){
   cancelVmForm();
@@ -2878,8 +2879,15 @@ function toggleVmForm(){
   if(!f)f=document.getElementById('vmAddForm');
   if(!f)return;
   const hidden=f.classList.contains('hidden');
-  if(hidden){f.classList.remove('hidden');setTimeout(()=>document.getElementById('vf-name')?.focus(),100);}
-  else cancelVmForm();
+  if(hidden){
+    f.classList.remove('hidden');
+    setTimeout(()=>{
+      _updateOsDropdown();
+      document.getElementById('vf-name')?.focus();
+    },100);
+  }else{
+    cancelVmForm();
+  }
 }
 function cancelVmForm(){
   let f=document.getElementById('vmFormContainer');
