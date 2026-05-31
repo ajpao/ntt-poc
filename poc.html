@@ -2717,8 +2717,8 @@ function _fbPush(includeVm=false){
   _fb.set(payload).catch(e=>console.warn('FB push err',e));
 }
 function _fbPushVm(){
-  if(!_fbVm)return;
-  _fbVm.set(JSON.stringify(vmInventory)).catch(e=>console.warn('FB vm err',e));
+  if(!_fbVm)return Promise.resolve();
+  return _fbVm.set(JSON.stringify(vmInventory)).catch(e=>{console.warn('FB vm err',e);});
 }
 function _fbSetStatus(s){
   const el=document.getElementById('syncBadge');if(!el)return;
@@ -3006,19 +3006,28 @@ function editVm(id){
     if(nameInput)nameInput.focus();
   },100);
 }
-function saveEditVm(id){
+async function saveEditVm(id){
   const v=vmInventory.find(x=>x.id===id);if(!v)return;
-  const name=(document.getElementById('vm-edit-name-'+id)?.value||'').trim();
-  if(!name){alert('VM Name is required');return;}
+  // Read DOM values FIRST before clearing edit state (in case re-render strips inputs)
+  const nameEl=document.getElementById('vm-edit-name-'+id);
+  const hostEl=document.getElementById('vm-edit-hostname-'+id);
+  const siteEl=document.getElementById('vm-edit-site-'+id);
+  const osEl=document.getElementById('vm-edit-os-'+id);
+  const ipEl=document.getElementById('vm-edit-ip-'+id);
+  const funcEl=document.getElementById('vm-edit-func-'+id);
+  if(!nameEl){console.warn('Edit inputs missing for',id);return;}
+  const name=(nameEl.value||'').trim();
+  if(!name){alert('VM Name is required');nameEl.focus();return;}
   v.name=name;
-  v.hostname=(document.getElementById('vm-edit-hostname-'+id)?.value||'').trim();
-  v.site=(document.getElementById('vm-edit-site-'+id)?.value||'').trim();
-  v.os=(document.getElementById('vm-edit-os-'+id)?.value||'').trim();
-  v.ip=(document.getElementById('vm-edit-ip-'+id)?.value||'').trim();
-  v.func=(document.getElementById('vm-edit-func-'+id)?.value||'').trim();
+  v.hostname=(hostEl?.value||'').trim();
+  v.site=(siteEl?.value||'').trim();
+  v.os=(osEl?.value||'').trim();
+  v.ip=(ipEl?.value||'').trim();
+  v.func=(funcEl?.value||'').trim();
   v.updatedAt=Date.now();
   _vmEditingId=null;
-  _fbPushVm();renderVmTable();
+  renderVmTable();
+  await _fbPushVm();
 }
 function cancelEditVm(){
   _vmEditingId=null;
@@ -3150,12 +3159,20 @@ function _fbStartSync(){
       if(!Array.isArray(incoming)||incoming.length===0){
         vmInventory=[...VM_SEED];
         _fbPushVm();
-        renderVmTable();
+        if(!_vmEditingId)renderVmTable();
         return;
       }
       if(JSON.stringify(incoming)!==JSON.stringify(vmInventory)){
-        vmInventory=incoming;
-        renderVmTable();
+        // Don't disturb the row currently being edited — keep the user's in-progress edit object intact
+        if(_vmEditingId){
+          const editingEntry=vmInventory.find(x=>x.id===_vmEditingId);
+          vmInventory=incoming.map(it=>it.id===_vmEditingId&&editingEntry?editingEntry:it);
+          // also keep editing entry if it was removed remotely
+          if(!vmInventory.some(x=>x.id===_vmEditingId)&&editingEntry)vmInventory.push(editingEntry);
+        }else{
+          vmInventory=incoming;
+          renderVmTable();
+        }
       }
     },()=>{});
   }
