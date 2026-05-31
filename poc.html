@@ -2589,6 +2589,7 @@ function _fbStartSync(){
 function _fbApply(data){
   _fbPendingSync=false;
   let changed=false;
+  const oldStatuses=currentCase?getCaseStepStatuses():[];
   if(data.s&&JSON.stringify(data.s)!==JSON.stringify(stepStatusStore)){
     stepStatusStore=data.s;
     try{localStorage.setItem(STEP_STATUS_KEY,JSON.stringify(stepStatusStore));}catch(e){}
@@ -2602,7 +2603,14 @@ function _fbApply(data){
   if(changed&&currentCase){
     renderSteps();
     updateCaseStatusFromSteps();
-    renderAnimation();
+    const newStatuses=getCaseStepStatuses();
+    let animIdx=null,animSt='idle';
+    for(let i=newStatuses.length-1;i>=0;i--){
+      if(newStatuses[i]!==oldStatuses[i]&&(newStatuses[i]==='running'||newStatuses[i]==='done')){
+        animIdx=i;animSt=newStatuses[i];break;
+      }
+    }
+    renderAnimation(animIdx,animSt);
     updateProgressBar();
     document.querySelectorAll('.note-btn').forEach((btn,i)=>{
       const note=getNote(i);
