@@ -892,7 +892,6 @@ opacity:1
   <div class="vm-body">
     <div class="vm-page-head">
       <div style="font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--dim);letter-spacing:1px">รายการ Node / VM ทั้งหมดใน POC Environment — sync real-time ทุก session</div>
-      <button class="vm-btn add" onclick="toggleVmForm()">＋ REGISTER NODE</button>
     </div>
     <!-- Add/Edit Form -->
     <div id="vmAddForm" class="vm-add-form hidden">
@@ -2881,6 +2880,9 @@ function renderVmTable(){
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">
       <button class="vm-filter-btn" style="border-color:var(--danger);color:var(--danger);border-width:2px;padding:7px 16px;font-size:.78rem;font-weight:600;letter-spacing:1px" onclick="_vmSearch='';document.getElementById('vmSearchInput').value='';_vmFilterOs=null;_vmFilterSite=null;_vmFilterSubnet=null;renderVmTable()" title="ล้างทุกการค้นหาและกรอง">✕ CLEAR FILTER</button>
     </div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:16px 0">
+    <button class="vm-btn add" onclick="toggleVmForm()" style="font-size:.85rem;padding:8px 18px">＋ NEW REGISTER</button>
   </div>
   ${!list.length?'<div class="vm-empty">ไม่พบรายการที่ตรงกับการค้นหา</div>':`
   <table class="vm-table">
