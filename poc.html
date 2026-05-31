@@ -98,6 +98,10 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
 .diagram-wrap svg{width:100%;display:block;min-height:320px}
 .info-float{position:fixed;top:76px;right:20px;width:42px;height:42px;border-radius:50%;border:1px solid rgba(51,153,255,.55);background:rgba(12,20,36,.9);color:#fff;font-family:'Share Tech Mono',monospace;font-size:1.05rem;font-weight:700;cursor:pointer;display:grid;place-items:center;box-shadow:0 0 22px rgba(51,153,255,.24);transition:.2s;z-index:80}
 .info-float:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 0 26px rgba(255,107,0,.24);transform:translateY(-1px)}
+.vm-page{display:none;flex-direction:column;min-height:100vh}
+.vm-body{width:100%;max-width:1340px;margin:0 auto;padding:20px 16px}
+.vm-page-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.vm-page-title{font-family:'Share Tech Mono',monospace;color:var(--purple);font-size:1rem;letter-spacing:2px}
 .vm-float{position:fixed;top:128px;right:20px;width:42px;height:42px;border-radius:50%;border:1px solid rgba(168,85,247,.55);background:rgba(12,20,36,.9);color:#a855f7;font-family:'Share Tech Mono',monospace;font-size:.62rem;font-weight:700;cursor:pointer;display:grid;place-items:center;box-shadow:0 0 22px rgba(168,85,247,.18);transition:.2s;z-index:80;line-height:1.1;text-align:center}
 .vm-float:hover{border-color:var(--purple);color:#fff;box-shadow:0 0 26px rgba(168,85,247,.32);transform:translateY(-1px)}
 .vm-table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}
@@ -691,35 +695,6 @@ opacity:1
         </div>
       </div>
     </div>
-    <!-- VM Inventory Modal -->
-    <div class="modal-ov" id="vmModal" onclick="vmModalBackdrop(event)">
-      <div class="modal-panel" style="width:min(900px,96vw)" role="dialog" aria-modal="true">
-        <div class="modal-head">
-          <div class="modal-title" style="color:var(--purple)">⊞ VM INVENTORY</div>
-          <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
-            <button class="vm-btn add" onclick="toggleVmForm()">＋ Add VM</button>
-            <button class="modal-close" type="button" onclick="closeVmInventory()">&times;</button>
-          </div>
-        </div>
-        <div class="modal-body">
-          <!-- Add/Edit Form -->
-          <div id="vmAddForm" class="vm-add-form hidden">
-            <div class="vm-field"><label>VM NAME</label><input id="vf-name" type="text" placeholder="เช่น vm-web-01"/></div>
-            <div class="vm-field"><label>OS</label><input id="vf-os" type="text" placeholder="เช่น Ubuntu 22.04 / Windows Server 2022"/></div>
-            <div class="vm-field"><label>IP ADDRESS</label><input id="vf-ip" type="text" placeholder="เช่น 172.31.40.10"/></div>
-            <div class="vm-field"><label>HOSTNAME</label><input id="vf-hostname" type="text" placeholder="เช่น web-srv-01"/></div>
-            <div class="vm-field full"><label>FUNCTION / ROLE</label><textarea id="vf-func" placeholder="เช่น Web Server สำหรับทดสอบ HTTP load balancing ใน POC"></textarea></div>
-            <input type="hidden" id="vf-edit-id"/>
-            <div class="vm-form-actions">
-              <button class="vm-btn cancel" onclick="cancelVmForm()">CANCEL</button>
-              <button class="vm-btn save" onclick="saveVmEntry()">&#10003; SAVE</button>
-            </div>
-          </div>
-          <!-- Table -->
-          <div id="vmTableWrap"></div>
-        </div>
-      </div>
-    </div>
     <div class="btn-bar" id="caseButtons"></div>
     <div class="progress-bar-wrap">
       <div class="progress-bar-label"><span class="pb-title">&#9632; OVERALL PROGRESS</span><span class="pb-stat" id="progressText">—</span></div>
@@ -883,6 +858,37 @@ opacity:1
 </div>
 <!-- Floating Settings Button -->
 <button class="settings-fab" onclick="openSettingsModal()" title="Diagram Settings">&#9881;</button>
+
+<!-- VM Inventory Page -->
+<div id="pg-vm" class="page vm-page">
+  <div class="topbar">
+    <div class="topbar-icon">⊞</div>
+    <div class="topbar-title" style="color:var(--purple)">VM INVENTORY</div>
+    <div class="topbar-sub">NODE &amp; VM REGISTRY</div>
+    <button class="back-link" onclick="closeVmInventory()">BACK</button>
+  </div>
+  <div class="vm-body">
+    <div class="vm-page-head">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--dim);letter-spacing:1px">รายการ Node / VM ทั้งหมดใน POC Environment — sync real-time ทุก session</div>
+      <button class="vm-btn add" onclick="toggleVmForm()">＋ Add VM</button>
+    </div>
+    <!-- Add/Edit Form -->
+    <div id="vmAddForm" class="vm-add-form hidden">
+      <div class="vm-field"><label>VM NAME</label><input id="vf-name" type="text" placeholder="เช่น vm-web-01"/></div>
+      <div class="vm-field"><label>OS</label><input id="vf-os" type="text" placeholder="เช่น Ubuntu 22.04 / Windows Server 2022"/></div>
+      <div class="vm-field"><label>IP ADDRESS</label><input id="vf-ip" type="text" placeholder="เช่น 172.31.40.10"/></div>
+      <div class="vm-field"><label>HOSTNAME</label><input id="vf-hostname" type="text" placeholder="เช่น web-srv-01"/></div>
+      <div class="vm-field full"><label>FUNCTION / ROLE / หมายเหตุ</label><textarea id="vf-func" placeholder="เช่น Web Server สำหรับทดสอบ HTTP load balancing | iLO: 172.31.10.50 | Login: admin/password"></textarea></div>
+      <input type="hidden" id="vf-edit-id"/>
+      <div class="vm-form-actions">
+        <button class="vm-btn cancel" onclick="cancelVmForm()">CANCEL</button>
+        <button class="vm-btn save" onclick="saveVmEntry()">&#10003; SAVE</button>
+      </div>
+    </div>
+    <!-- Table -->
+    <div id="vmTableWrap"></div>
+  </div>
+</div>
 
 <script>
 const cases={
@@ -2702,9 +2708,22 @@ function loadVmLocal(){
   if(!vmInventory.length){vmInventory=[...VM_SEED];saveVmLocal();_fbPushVm();}
 }
 function saveVmLocal(){try{localStorage.setItem(VM_LS_KEY,JSON.stringify(vmInventory));}catch(e){}}
-function openVmInventory(){renderVmTable();document.getElementById('vmModal').classList.add('open');}
-function closeVmInventory(){document.getElementById('vmModal').classList.remove('open');cancelVmForm();}
-function vmModalBackdrop(e){if(e.target.id==='vmModal')closeVmInventory();}
+function openVmInventory(){
+  // hide all other pages
+  document.getElementById('pg-landing').style.display='none';
+  document.getElementById('pg-sim').style.display='none';
+  document.getElementById('pg-vm').style.display='flex';
+  renderVmTable();
+}
+function closeVmInventory(){
+  cancelVmForm();
+  document.getElementById('pg-vm').style.display='none';
+  // return to whichever page was active (sim or landing)
+  const hasPart=currentPart&&cases[currentPart];
+  if(hasPart)document.getElementById('pg-sim').style.display='flex';
+  else document.getElementById('pg-landing').style.display='flex';
+}
+function vmModalBackdrop(){}
 function toggleVmForm(){
   const f=document.getElementById('vmAddForm');
   const hidden=f.classList.contains('hidden');
