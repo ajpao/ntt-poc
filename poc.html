@@ -2672,7 +2672,7 @@ function _fbSetStatus(s){
 }
 // ── VM Inventory ────────────────────────────────────────────────────────────
 let vmInventory=[];
-const VM_LS_KEY='poc_vm_inventory_v3';
+const VM_LS_KEY='poc_vm_inventory_v4';
 function _vmGenId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 const VM_SEED=[
   /* ── Old Cluster ────────────────────────────────────────── */
@@ -2698,6 +2698,16 @@ const VM_SEED=[
   {id:'seed-05',name:'vcenter-new-01 (Witness)',hostname:'vcenter-new-01',site:'Management',
    os:'VMware vCenter 8',ip:'172.31.10.7',
    func:'vCenter HA Witness Node'},
+  /* ── vCenter HA Network (vMotion VLAN 20) ───────────────── */
+  {id:'seed-vc-vmot-1',name:'vcenter-new-01 (Active) - vMotion',hostname:'vcenter-new-01-vmot',site:'Management',
+   os:'VMware vCenter 8',ip:'172.31.20.5',
+   func:'vCenter HA Active Node — vMotion Network Interface (VLAN 20)'},
+  {id:'seed-vc-vmot-2',name:'vcenter-new-01 (Passive) - vMotion',hostname:'vcenter-new-01-vmot',site:'Management',
+   os:'VMware vCenter 8',ip:'172.31.20.6',
+   func:'vCenter HA Passive Node — vMotion Network Interface (VLAN 20)'},
+  {id:'seed-vc-vmot-3',name:'vcenter-new-01 (Witness) - vMotion',hostname:'vcenter-new-01-vmot',site:'Management',
+   os:'VMware vCenter 8',ip:'172.31.20.7',
+   func:'vCenter HA Witness Node — vMotion Network Interface (VLAN 20)'},
   /* ── New Cluster Hosts ──────────────────────────────────── */
   {id:'seed-06',name:'site-a-esxi-01',hostname:'site-a-esxi-01',site:'Site A (DC)',
    os:'VMware ESXi 8',ip:'172.31.10.10',
@@ -2734,7 +2744,7 @@ const VM_SEED=[
   {id:'seed-vm5',name:'VM5',hostname:'vm5',site:'Site A (DC)',
    os:'Linux Ubuntu',ip:'172.31.40.5',
    func:'Production VM — Ubuntu Linux | Subnet: 255.255.255.0 | GW: 172.31.40.254'},
-].map(v=>({...v,updatedAt:1700000000002}));
+].map(v=>({...v,updatedAt:1700000000003}));
 function loadVmLocal(){
   try{vmInventory=JSON.parse(localStorage.getItem(VM_LS_KEY)||'[]')||[];}catch(e){vmInventory=[];}
   if(!vmInventory.length){vmInventory=[...VM_SEED];saveVmLocal();_fbPushVm();}
