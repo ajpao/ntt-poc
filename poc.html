@@ -2880,6 +2880,21 @@ function _siteCls(site){
   const m={'Old Cluster':'old','Site A (DC)':'siteA','Site B (MM)':'siteB','Site C (DR)':'siteC','Management':'mgmt','Backup':'backup'};
   return m[site]||'other';
 }
+// [color, bg, border] for OS tag, picked by family keyword
+function _osColor(os){
+  const s=(os||'').toLowerCase();
+  if(s.includes('windows'))       return ['#6ec1ff','rgba(51,153,255,.15)','rgba(51,153,255,.45)'];   // Windows = blue
+  if(s.includes('vmware')||s.includes('esxi')||s.includes('vcenter')) return ['#2dd4bf','rgba(45,212,191,.15)','rgba(45,212,191,.45)']; // VMware = teal
+  if(s.includes('ubuntu'))        return ['#ff9a4a','rgba(255,107,0,.15)','rgba(255,107,0,.45)'];      // Ubuntu = orange
+  if(s.includes('debian'))        return ['#ff7aa8','rgba(255,51,102,.15)','rgba(255,51,102,.45)'];    // Debian = pink/red
+  if(s.includes('red hat')||s.includes('rhel')) return ['#ff6b6b','rgba(255,51,51,.15)','rgba(255,51,51,.45)']; // RHEL = red
+  if(s.includes('centos'))        return ['#a78bfa','rgba(139,92,246,.15)','rgba(139,92,246,.45)'];    // CentOS = violet
+  if(s.includes('suse'))          return ['#73e681','rgba(0,200,80,.15)','rgba(0,200,80,.45)'];        // SUSE = green
+  if(s.includes('linux'))         return ['#00e5a0','rgba(0,229,160,.14)','rgba(0,229,160,.45)'];      // generic Linux = mint
+  if(s.includes('ilo')||s.includes('imm')||s.includes('hdm')||s.includes('idrac')) return ['#ffcc00','rgba(255,204,0,.15)','rgba(255,204,0,.45)']; // OOB = yellow
+  if(s.includes('nas'))           return ['#c084fc','rgba(168,85,247,.18)','rgba(168,85,247,.45)'];    // NAS = purple
+  return ['#9fb3d6','rgba(123,140,174,.16)','rgba(123,140,174,.4)'];                                   // fallback = grey-blue
+}
 // [color, bg, border] for active filter button matching each site's tag color
 function _siteColor(site){
   const m={
@@ -3055,7 +3070,7 @@ function renderVmTable(){
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
       <span style="font-family:'Share Tech Mono',monospace;font-size:.74rem;font-weight:700;color:#c084fc;letter-spacing:1.5px;white-space:nowrap;min-width:120px;text-align:right;padding-right:6px;text-shadow:0 0 8px rgba(168,85,247,.35)">OS TAG</span>
       <button class="vm-filter-btn${!_vmFilterOs?' active':''}" onclick="_vmFilterOs=null;renderVmTable()">ALL</button>
-      ${allOs.map(o=>`<button class="vm-filter-btn${_vmFilterOs===o?' active':''}" onclick="_vmFilterOs=${_vmFilterOs===o?'null':`'${o.replace(/'/g,"\\'")}'`};renderVmTable()">${esc(o)}</button>`).join('')}
+      ${allOs.map(o=>{const[c,bg,bc]=_osColor(o);const on=_vmFilterOs===o;return `<button class="vm-filter-btn" style="${on?`border-color:${bc};color:${c};background:${bg}`:''}" onclick="_vmFilterOs=${on?'null':`'${o.replace(/'/g,"\\'")}'`};renderVmTable()">${esc(o)}</button>`;}).join('')}
     </div>
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
       <span style="font-family:'Share Tech Mono',monospace;font-size:.74rem;font-weight:700;color:#c084fc;letter-spacing:1.5px;white-space:nowrap;min-width:120px;text-align:right;padding-right:6px;text-shadow:0 0 8px rgba(168,85,247,.35)">VLAN / SUBNET</span>
@@ -3145,7 +3160,7 @@ function renderVmTable(){
         return `<span style="font-family:'Share Tech Mono',monospace;font-size:.64rem;padding:2px 7px;border-radius:4px;background:${bg};border:1px solid ${bc};color:${c};cursor:pointer;white-space:nowrap" onclick="_vmFilterLocation=_vmFilterLocation==='${esc(v.location)}'?null:'${esc(v.location)}';renderVmTable()" title="คลิกเพื่อ filter ESXi นี้">${esc(v.location)}</span>`;
       })()}</td>
       <td>${v.type?`<span class="vm-type-tag ${v.type==='VM'?'vm':'physical'}" onclick="_vmFilterType=_vmFilterType==='${v.type}'?null:'${v.type}';renderVmTable()" title="คลิกเพื่อ filter Type นี้">${esc(v.type)}</span>`:'<span style="color:var(--dim);font-size:.72rem">—</span>'}</td>
-      <td><span class="vm-os-tag" onclick="_vmFilterOs=_vmFilterOs==='${v.os.replace(/'/g,"\\'")}'?null:'${v.os.replace(/'/g,"\\'")}';renderVmTable()" title="คลิกเพื่อ filter OS นี้">${esc(v.os||'—')}</span></td>
+      <td>${(()=>{const[c,bg,bc]=_osColor(v.os);return `<span class="vm-os-tag" style="background:${bg};border-color:${bc};color:${c}" onclick="_vmFilterOs=_vmFilterOs==='${v.os.replace(/'/g,"\\'")}'?null:'${v.os.replace(/'/g,"\\'")}';renderVmTable()" title="คลิกเพื่อ filter OS นี้">${esc(v.os||'—')}</span>`;})()}</td>
       <td style="font-family:'Share Tech Mono',monospace;color:var(--info);font-size:.76rem">${esc(v.ip||'—')}</td>
       <td style="font-size:.76rem;color:var(--dim);max-width:320px;word-break:break-word">${esc(v.func||'—')}</td>
       <td style="white-space:nowrap">
