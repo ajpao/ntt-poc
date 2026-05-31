@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -3037,8 +3037,8 @@ function renderVmTable(){
     </div>
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
       <span style="font-family:'Share Tech Mono',monospace;font-size:.74rem;font-weight:700;color:#c084fc;letter-spacing:1.5px;white-space:nowrap;min-width:120px;text-align:right;padding-right:6px;text-shadow:0 0 8px rgba(168,85,247,.35)">SITE</span>
-      <button class="vm-filter-btn${_vmFilterSite?'':' active-site'}" onclick="_vmFilterSite=null;renderVmTable()">ALL</button>
-      ${allSites.map(s=>`<button class="vm-filter-btn${_vmFilterSite===s?' active-site':''}" onclick="_vmFilterSite=${_vmFilterSite===s?'null':`'${s}'`};renderVmTable()">${esc(s)}</button>`).join('')}
+      <button class="vm-filter-btn${_vmFilterSite?'':' active'}" onclick="_vmFilterSite=null;renderVmTable()">ALL</button>
+      ${allSites.map(s=>`<button class="vm-filter-btn${_vmFilterSite===s?' active':''}" onclick="_vmFilterSite=${_vmFilterSite===s?'null':`'${s}'`};renderVmTable()">${esc(s)}</button>`).join('')}
     </div>
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
       <span style="font-family:'Share Tech Mono',monospace;font-size:.74rem;font-weight:700;color:#c084fc;letter-spacing:1.5px;white-space:nowrap;min-width:120px;text-align:right;padding-right:6px;text-shadow:0 0 8px rgba(168,85,247,.35)">OS TAG</span>
@@ -3047,14 +3047,14 @@ function renderVmTable(){
     </div>
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
       <span style="font-family:'Share Tech Mono',monospace;font-size:.74rem;font-weight:700;color:#c084fc;letter-spacing:1.5px;white-space:nowrap;min-width:120px;text-align:right;padding-right:6px;text-shadow:0 0 8px rgba(168,85,247,.35)">VLAN / SUBNET</span>
-      <button class="vm-filter-btn${!_vmFilterSubnet?' active-site':''}" onclick="_vmFilterSubnet=null;renderVmTable()">ALL</button>
-      ${VM_VLANS.map(v=>`<button class="vm-filter-btn${_vmFilterSubnet===v.id?' active-site':''}" onclick="_vmFilterSubnet=_vmFilterSubnet==='${v.id}'?null:'${v.id}';renderVmTable()" title="${v.desc} ${v.range}">${v.name}</button>`).join('')}
+      <button class="vm-filter-btn${!_vmFilterSubnet?' active':''}" onclick="_vmFilterSubnet=null;renderVmTable()">ALL</button>
+      ${VM_VLANS.map(v=>`<button class="vm-filter-btn${_vmFilterSubnet===v.id?' active':''}" onclick="_vmFilterSubnet=_vmFilterSubnet==='${v.id}'?null:'${v.id}';renderVmTable()" title="${v.desc} ${v.range}">${v.name}</button>`).join('')}
     </div>
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
       <span style="font-family:'Share Tech Mono',monospace;font-size:.74rem;font-weight:700;color:#c084fc;letter-spacing:1.5px;white-space:nowrap;min-width:120px;text-align:right;padding-right:6px;text-shadow:0 0 8px rgba(168,85,247,.35)">TYPE</span>
       <button class="vm-filter-btn${!_vmFilterType?' active':''}" onclick="_vmFilterType=null;renderVmTable()">ALL</button>
-      <button class="vm-filter-btn${_vmFilterType==='VM'?' active':''}" style="${_vmFilterType==='VM'?'border-color:#00e5a0;color:#00e5a0;background:rgba(0,229,160,.12)':''}" onclick="_vmFilterType=_vmFilterType==='VM'?null:'VM';renderVmTable()">VM</button>
-      <button class="vm-filter-btn${_vmFilterType==='Physical'?' active':''}" style="${_vmFilterType==='Physical'?'border-color:#ff9a4a;color:#ff9a4a;background:rgba(255,107,0,.12)':''}" onclick="_vmFilterType=_vmFilterType==='Physical'?null:'Physical';renderVmTable()">Physical</button>
+      <button class="vm-filter-btn${_vmFilterType==='VM'?' active':''}" onclick="_vmFilterType=_vmFilterType==='VM'?null:'VM';renderVmTable()">VM</button>
+      <button class="vm-filter-btn${_vmFilterType==='Physical'?' active':''}" onclick="_vmFilterType=_vmFilterType==='Physical'?null:'Physical';renderVmTable()">Physical</button>
     </div>
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
       <span style="font-family:'Share Tech Mono',monospace;font-size:.74rem;font-weight:700;color:#c084fc;letter-spacing:1.5px;white-space:nowrap;min-width:120px;text-align:right;padding-right:6px;text-shadow:0 0 8px rgba(168,85,247,.35)">VM LOCATION</span>
