@@ -2812,10 +2812,10 @@ function vmModalBackdrop(){}
 // can be active at once (priority = click order).
 let _vmSort=[];
 function _vmToggleSort(key){
-  const i=_vmSort.findIndex(s=>s.key===key);
-  if(i<0){_vmSort.push({key,dir:'asc'});}
-  else if(_vmSort[i].dir==='asc'){_vmSort[i].dir='desc';}
-  else{_vmSort.splice(i,1);} // remove → off
+  // Single-column sort: clicking a column makes it the ONLY active sort.
+  const cur=_vmSort.length&&_vmSort[0].key===key?_vmSort[0].dir:null;
+  const next=cur==='asc'?'desc':cur==='desc'?null:'asc';
+  _vmSort=next?[{key,dir:next}]:[];
   renderVmTable();
 }
 function _vmSortDir(key){const s=_vmSort.find(x=>x.key===key);return s?s.dir:null;}
@@ -3023,7 +3023,7 @@ function renderVmTable(){
   const siteOrder=['Management','Old Cluster','Site A (DC)','Site B (MM)','Site C (DR)','Backup','Other'];
   allSites.sort((a,b)=>(siteOrder.indexOf(a)+1||99)-(siteOrder.indexOf(b)+1||99));
   // sort header helpers — take a column key, read from _vmSort
-  const _si=key=>{const d=_vmSortDir(key);const r=_vmSortRank(key);return d?`${d==='asc'?'↑':'↓'}${_vmSort.length>1?'<sup style="font-size:.6em;opacity:.8">'+r+'</sup>':''}`:'↕';};
+  const _si=key=>{const d=_vmSortDir(key);return d==='asc'?'↑':d==='desc'?'↓':'↕';};
   const _sc=key=>_vmSortDir(key)?`sort-${_vmSortDir(key)}`:'';
   wrap.innerHTML=`
   <div class="vm-toolbar" style="flex-direction:column;gap:10px;align-items:stretch">
