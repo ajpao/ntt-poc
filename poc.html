@@ -866,7 +866,6 @@ const _fbConfig={
 };
 firebase.initializeApp(_fbConfig);
 const _fbRef=firebase.database().ref('poc');
-const _myClientId=Math.random().toString(36).slice(2); // unique per page load
 // ────────────────────────────────────────────────────────────────────────────
 const STEP_STATUS_KEY='poc_step_status_v1';
 const STEP_STATUSES=[
@@ -880,7 +879,9 @@ const STEP_NOTES_KEY='poc_step_notes_v1';
 let stepNotesStore={};
 const openNoteKeys=new Set();
 function loadStepNotes(){/* handled by Firebase onValue */}
-function saveStepNotes(){ _fbSave(); }
+function saveStepNotes(){
+  _fbRef.child('stepNotes').set(JSON.stringify(stepNotesStore)).catch(e=>console.error('FB',e));
+}
 function getNote(index){
   const key=caseKey();
   const notes=stepNotesStore[key];
@@ -973,14 +974,9 @@ function toggleNote(index){
 }
 function nowTs(){return new Date().toLocaleTimeString('th-TH',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});}
 function loadStepStatuses(){/* handled by Firebase onValue */}
-function _fbSave(){
-  _fbRef.set({
-    stepStatuses:JSON.stringify(stepStatusStore),
-    stepNotes:JSON.stringify(stepNotesStore),
-    clientId:_myClientId
-  }).catch(e=>console.error('FB:save',e));
+function saveStepStatuses(){
+  _fbRef.child('stepStatuses').set(JSON.stringify(stepStatusStore)).catch(e=>console.error('FB',e));
 }
-function saveStepStatuses(){ _fbSave(); }
 function caseKey(){
   return currentPart&&currentCase?`${currentPart}:${currentCase.id}`:'';
 }
@@ -2561,9 +2557,6 @@ function startFirebaseSync(){
   setSyncStatus('connecting');
   _fbRef.on('value',snap=>{
     const data=snap.val()||{};
-    // skip our own writes — local state is already correct
-    if(data.clientId===_myClientId)return;
-    // skip during simulation to avoid mid-animation overwrites
     if(running)return;
     if(data.stepStatuses){try{stepStatusStore=JSON.parse(data.stepStatuses)||{};}catch(e){}}
     if(data.stepNotes){try{stepNotesStore=JSON.parse(data.stepNotes)||{};}catch(e){}}
