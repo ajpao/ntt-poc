@@ -1008,7 +1008,7 @@ let selected=null,currentPart=null,currentCase=null,running=false;
 let currentStepFilter='all',celebTimer=null;
 const STEP_STATUS_KEY='poc_step_status_v1';
 // ── Firebase Realtime Database ──────────────────────────────────────────────
-let _fb=null,_fbVm=null;
+let _fb=null,_fbVm=null,_fbTrash=null;
 try{
   firebase.initializeApp({
     apiKey:"AIzaSyB1tDvD2NLYCyxQqA_WxKNF6LnTWUfVtEM",
@@ -1021,6 +1021,7 @@ try{
   });
   _fb=firebase.database().ref('poc');
   _fbVm=firebase.database().ref('poc-vm');
+  _fbTrash=firebase.database().ref('poc-vm-trash');
 }catch(e){console.warn('Firebase init failed, using localStorage only',e);}
 let _fbReady=false;
 let _fbPendingSync=false;
@@ -2825,13 +2826,17 @@ function cancelVmForm(){
 let _vmSearch='',_vmFilterOs=null,_vmFilterSite=null,_vmFilterSubnet=null,_vmSortIp=null,_vmSortName=null,_vmSearchTimer=null;
 let _vmEditingId=null;
 let vmTrash=[];
-const VM_TRASH_KEY='poc_vm_trash_v1';
-function loadVmTrash(){try{vmTrash=JSON.parse(localStorage.getItem(VM_TRASH_KEY)||'[]')||[];}catch(e){vmTrash=[];}}
-function saveVmTrash(){try{localStorage.setItem(VM_TRASH_KEY,JSON.stringify(vmTrash));}catch(e){}}
+// Trash lives in Firebase /poc-vm-trash — synced across all sessions
+function loadVmTrash(){/* no-op, Firebase listener seeds vmTrash */}
+function saveVmTrash(){
+  if(!_fbTrash)return Promise.resolve();
+  return _fbTrash.set(JSON.stringify(vmTrash)).catch(e=>console.warn('FB trash err',e));
+}
 function _purgeExpiredTrash(){
   const now=Date.now();
-  vmTrash=vmTrash.filter(t=>(now-t.deletedAt)<86400000);  // 24 hours = 86400000ms
-  saveVmTrash();
+  const before=vmTrash.length;
+  vmTrash=vmTrash.filter(t=>(now-t.deletedAt)<86400000);  // 24 hours
+  if(vmTrash.length!==before)saveVmTrash();
 }
 const VM_VLANS=[
   {id:'v10',name:'VLAN 10',desc:'Management',range:'172.31.10.0/24'},
@@ -3091,6 +3096,21 @@ function _fbStartSync(){
           vmInventory=incoming;
           renderVmTable();
         }
+      }
+    },()=>{});
+  }
+  // Trash sync — keeps the 🗑 UNDO button visible across all sessions
+  if(_fbTrash){
+    _fbTrash.on('value',snap=>{
+      const raw=snap.val();
+      let incoming=[];
+      if(raw){try{incoming=JSON.parse(raw)||[];}catch(e){incoming=[];}}
+      if(!Array.isArray(incoming))incoming=[];
+      if(JSON.stringify(incoming)!==JSON.stringify(vmTrash)){
+        vmTrash=incoming;
+        renderVmTable();
+        // If trash modal is open, refresh it too
+        if(document.getElementById('vmTrashModal')?.classList.contains('open'))openTrashModal();
       }
     },()=>{});
   }
