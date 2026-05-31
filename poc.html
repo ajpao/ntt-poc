@@ -3039,14 +3039,7 @@ function renderVmTable(){
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
       <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap;min-width:34px">LOCATION:</span>
       <button class="vm-filter-btn${!_vmFilterLocation?' active':''}" onclick="_vmFilterLocation=null;renderVmTable()">ALL</button>
-      ${[
-        {h:'old-hpe-esxi-01', c:'#ff7070', bg:'rgba(199,23,23,.15)', bc:'rgba(199,23,23,.5)',  bgA:'rgba(199,23,23,.28)', bcA:'rgba(199,23,23,.85)'},
-        {h:'site-a-esxi-01',  c:'#00e5a0', bg:'rgba(0,229,160,.08)', bc:'rgba(0,229,160,.35)', bgA:'rgba(0,229,160,.22)',  bcA:'rgba(0,229,160,.9)'},
-        {h:'site-a-esxi-02',  c:'#00e5a0', bg:'rgba(0,229,160,.08)', bc:'rgba(0,229,160,.35)', bgA:'rgba(0,229,160,.22)',  bcA:'rgba(0,229,160,.9)'},
-        {h:'site-a-esxi-03',  c:'#00e5a0', bg:'rgba(0,229,160,.08)', bc:'rgba(0,229,160,.35)', bgA:'rgba(0,229,160,.22)',  bcA:'rgba(0,229,160,.9)'},
-        {h:'site-b-esxi-01',  c:'#6ec1ff', bg:'rgba(51,153,255,.08)', bc:'rgba(51,153,255,.35)',bgA:'rgba(51,153,255,.22)', bcA:'rgba(51,153,255,.9)'},
-        {h:'site-c-esxi-01',  c:'#ffcc00', bg:'rgba(255,204,0,.08)',  bc:'rgba(255,204,0,.35)', bgA:'rgba(255,204,0,.22)',  bcA:'rgba(255,204,0,.9)'},
-      ].map(({h,c,bg,bc,bgA,bcA})=>`<button class="vm-filter-btn" style="border-color:${_vmFilterLocation===h?bcA:bc};color:${c};background:${_vmFilterLocation===h?bgA:bg};opacity:${_vmFilterLocation===h?1:.7}" onclick="_vmFilterLocation=_vmFilterLocation==='${h}'?null:'${h}';renderVmTable()">${h}</button>`).join('')}
+      ${['old-hpe-esxi-01','site-a-esxi-01','site-a-esxi-02','site-a-esxi-03','site-b-esxi-01','site-c-esxi-01'].map(h=>`<button class="vm-filter-btn${_vmFilterLocation===h?' active':''}" onclick="_vmFilterLocation=_vmFilterLocation==='${h}'?null:'${h}';renderVmTable()">${h}</button>`).join('')}
     </div>
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">
       <button class="vm-filter-btn" style="border-color:var(--danger);color:var(--danger);border-width:2px;padding:7px 16px;font-size:.78rem;font-weight:600;letter-spacing:1px" onclick="_vmSearch='';document.getElementById('vmSearchInput').value='';_vmFilterOs=null;_vmFilterSite=null;_vmFilterSubnet=null;_vmFilterType=null;_vmFilterLocation=null;renderVmTable()" title="ล้างทุกการค้นหาและกรอง">✕ CLEAR FILTER</button>
