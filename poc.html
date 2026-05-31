@@ -2768,7 +2768,7 @@ function cancelVmForm(){
   f.classList.add('hidden');
   ['vf-name','vf-os','vf-ip','vf-hostname','vf-func','vf-edit-id'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
-let _vmSearch='',_vmFilterOs=null,_vmFilterSite=null,_vmSortIp=null,_vmSearchTimer=null;
+let _vmSearch='',_vmFilterOs=null,_vmFilterSite=null,_vmSortIp=null,_vmSortName=null,_vmSearchTimer=null;
 function _ipToNum(ip){const p=(ip||'').split('.').map(Number);return((p[0]||0)<<24)|((p[1]||0)<<16)|((p[2]||0)<<8)|(p[3]||0);}
 function _siteCls(site){
   const m={'Old Cluster':'old','Site A (DC)':'siteA','Site B (MM)':'siteB','Site C (DR)':'siteC','Management':'mgmt','Backup':'backup'};
@@ -2815,6 +2815,9 @@ function renderVmTable(){
   if(_vmSearch){const q=_vmSearch.toLowerCase();list=list.filter(v=>[v.name,v.hostname,v.ip,v.os,v.site,v.func].some(f=>(f||'').toLowerCase().includes(q)));}
   if(_vmFilterOs)list=list.filter(v=>v.os===_vmFilterOs);
   if(_vmFilterSite)list=list.filter(v=>v.site===_vmFilterSite);
+  // sort by Name
+  if(_vmSortName==='asc')list.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  else if(_vmSortName==='desc')list.sort((a,b)=>(b.name||'').localeCompare(a.name||''));
   // sort by IP
   if(_vmSortIp==='asc')list.sort((a,b)=>_ipToNum(a.ip)-_ipToNum(b.ip));
   else if(_vmSortIp==='desc')list.sort((a,b)=>_ipToNum(b.ip)-_ipToNum(a.ip));
@@ -2823,6 +2826,8 @@ function renderVmTable(){
   const allSites=[...new Set(vmInventory.map(v=>v.site).filter(Boolean))];
   const siteOrder=['Management','Old Cluster','Site A (DC)','Site B (MM)','Site C (DR)','Backup','Other'];
   allSites.sort((a,b)=>(siteOrder.indexOf(a)+1||99)-(siteOrder.indexOf(b)+1||99));
+  const nameIcon=_vmSortName==='asc'?'↑':_vmSortName==='desc'?'↓':'↕';
+  const nameCls=_vmSortName?`sort-${_vmSortName}`:'';
   const ipIcon=_vmSortIp==='asc'?'↑':_vmSortIp==='desc'?'↓':'↕';
   const ipCls=_vmSortIp?`sort-${_vmSortIp}`:'';
   wrap.innerHTML=`
@@ -2851,7 +2856,7 @@ function renderVmTable(){
   <table class="vm-table">
     <thead><tr>
       <th style="width:36px">#</th>
-      <th>VM / NODE NAME</th>
+      <th class="sortable ${nameCls}" onclick="_vmSortName=_vmSortName==='asc'?'desc':_vmSortName==='desc'?null:'asc';renderVmTable()">VM / NODE NAME <span class="sort-icon">${nameIcon}</span></th>
       <th>HOSTNAME</th>
       <th>SITE</th>
       <th>OS</th>
