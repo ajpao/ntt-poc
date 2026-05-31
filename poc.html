@@ -3098,7 +3098,20 @@ function renderVmTable(){
       <td style="font-family:'Share Tech Mono',monospace;color:var(--ok);font-size:.76rem">${esc(v.name)}</td>
       <td style="font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--dim)">${esc(v.hostname||'—')}</td>
       <td><span class="vm-site-tag ${_siteCls(v.site)}" onclick="_vmFilterSite=_vmFilterSite==='${v.site.replace(/'/g,"\\'")}'?null:'${v.site.replace(/'/g,"\\'")}';renderVmTable()" title="คลิกเพื่อ filter Site นี้" style="cursor:pointer">${esc(v.site||'—')}</span></td>
-      <td>${v.type==='VM'?(v.location?(()=>{const _lc={'old-hpe-esxi-01':'#ff7070,rgba(199,23,23,.15),rgba(199,23,23,.45)','site-a-esxi-01':'#00e5a0,rgba(0,229,160,.12),rgba(0,229,160,.4)','site-a-esxi-02':'#00e5a0,rgba(0,229,160,.12),rgba(0,229,160,.4)','site-a-esxi-03':'#00e5a0,rgba(0,229,160,.12),rgba(0,229,160,.4)','site-b-esxi-01':'#6ec1ff,rgba(51,153,255,.12),rgba(51,153,255,.4)','site-c-esxi-01':'#ffcc00,rgba(255,204,0,.12),rgba(255,204,0,.4)'};const[c,bg,bc]=(_lc[v.location]||'#a855f7,rgba(168,85,247,.12),rgba(168,85,247,.4)').split(',');return `<span style="font-family:'Share Tech Mono',monospace;font-size:.64rem;padding:2px 7px;border-radius:4px;background:${bg};border:1px solid ${bc};color:${c};cursor:pointer;white-space:nowrap" onclick="_vmFilterLocation=_vmFilterLocation==='${esc(v.location)}'?null:'${esc(v.location)}';renderVmTable()" title="คลิกเพื่อ filter ESXi นี้">${esc(v.location)}</span>`;})():'<span style="color:var(--dim);font-size:.72rem">—</span>'):'<span style="color:var(--dim);font-size:.65rem;opacity:.4">N/A</span>'}</td>
+      <td>${(()=>{
+        if(v.type==='Physical')return '<span style="color:var(--dim);font-size:.65rem;opacity:.4">N/A</span>';
+        if(!v.location)return '<span style="color:var(--dim);font-size:.72rem">—</span>';
+        const _lc={
+          'old-hpe-esxi-01':['#ff7070','rgba(199,23,23,.18)','rgba(199,23,23,.55)'],
+          'site-a-esxi-01': ['#00e5a0','rgba(0,229,160,.14)','rgba(0,229,160,.5)'],
+          'site-a-esxi-02': ['#00e5a0','rgba(0,229,160,.14)','rgba(0,229,160,.5)'],
+          'site-a-esxi-03': ['#00e5a0','rgba(0,229,160,.14)','rgba(0,229,160,.5)'],
+          'site-b-esxi-01': ['#6ec1ff','rgba(51,153,255,.14)','rgba(51,153,255,.5)'],
+          'site-c-esxi-01': ['#ffcc00','rgba(255,204,0,.14)','rgba(255,204,0,.5)'],
+        };
+        const[c,bg,bc]=_lc[v.location]||['#a855f7','rgba(168,85,247,.14)','rgba(168,85,247,.5)'];
+        return `<span style="font-family:'Share Tech Mono',monospace;font-size:.64rem;padding:2px 7px;border-radius:4px;background:${bg};border:1px solid ${bc};color:${c};cursor:pointer;white-space:nowrap" onclick="_vmFilterLocation=_vmFilterLocation==='${esc(v.location)}'?null:'${esc(v.location)}';renderVmTable()" title="คลิกเพื่อ filter ESXi นี้">${esc(v.location)}</span>`;
+      })()}</td>
       <td>${v.type?`<span class="vm-type-tag ${v.type==='VM'?'vm':'physical'}" onclick="_vmFilterType=_vmFilterType==='${v.type}'?null:'${v.type}';renderVmTable()" title="คลิกเพื่อ filter Type นี้">${esc(v.type)}</span>`:'<span style="color:var(--dim);font-size:.72rem">—</span>'}</td>
       <td><span class="vm-os-tag" onclick="_vmFilterOs=_vmFilterOs==='${v.os.replace(/'/g,"\\'")}'?null:'${v.os.replace(/'/g,"\\'")}';renderVmTable()" title="คลิกเพื่อ filter OS นี้">${esc(v.os||'—')}</span></td>
       <td style="font-family:'Share Tech Mono',monospace;color:var(--info);font-size:.76rem">${esc(v.ip||'—')}</td>
