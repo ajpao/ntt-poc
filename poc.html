@@ -2880,6 +2880,18 @@ function _siteCls(site){
   const m={'Old Cluster':'old','Site A (DC)':'siteA','Site B (MM)':'siteB','Site C (DR)':'siteC','Management':'mgmt','Backup':'backup'};
   return m[site]||'other';
 }
+// [color, bg, border] for active filter button matching each site's tag color
+function _siteColor(site){
+  const m={
+    'Old Cluster':['#ff7070','rgba(199,23,23,.18)','rgba(199,23,23,.6)'],
+    'Site A (DC)':['#00e5a0','rgba(0,229,160,.16)','rgba(0,229,160,.6)'],
+    'Site B (MM)':['#6ec1ff','rgba(51,153,255,.16)','rgba(51,153,255,.6)'],
+    'Site C (DR)':['#ffcc00','rgba(255,204,0,.16)','rgba(255,204,0,.6)'],
+    'Management':['#c084fc','rgba(168,85,247,.18)','rgba(168,85,247,.6)'],
+    'Backup':['#ff9a4a','rgba(255,107,0,.16)','rgba(255,107,0,.6)'],
+  };
+  return m[site]||['#7b8cae','rgba(123,140,174,.16)','rgba(123,140,174,.5)'];
+}
 function saveVmEntry(){
   const name=(document.getElementById('vf-name').value||'').trim();
   if(!name){document.getElementById('vf-name').focus();return;}
@@ -3038,7 +3050,7 @@ function renderVmTable(){
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
       <span style="font-family:'Share Tech Mono',monospace;font-size:.74rem;font-weight:700;color:#c084fc;letter-spacing:1.5px;white-space:nowrap;min-width:120px;text-align:right;padding-right:6px;text-shadow:0 0 8px rgba(168,85,247,.35)">SITE</span>
       <button class="vm-filter-btn${_vmFilterSite?'':' active'}" onclick="_vmFilterSite=null;renderVmTable()">ALL</button>
-      ${allSites.map(s=>`<button class="vm-filter-btn${_vmFilterSite===s?' active':''}" onclick="_vmFilterSite=${_vmFilterSite===s?'null':`'${s}'`};renderVmTable()">${esc(s)}</button>`).join('')}
+      ${allSites.map(s=>{const[c,bg,bc]=_siteColor(s);const on=_vmFilterSite===s;return `<button class="vm-filter-btn" style="${on?`border-color:${bc};color:${c};background:${bg}`:''}" onclick="_vmFilterSite=${on?'null':`'${s}'`};renderVmTable()">${esc(s)}</button>`;}).join('')}
     </div>
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
       <span style="font-family:'Share Tech Mono',monospace;font-size:.74rem;font-weight:700;color:#c084fc;letter-spacing:1.5px;white-space:nowrap;min-width:120px;text-align:right;padding-right:6px;text-shadow:0 0 8px rgba(168,85,247,.35)">OS TAG</span>
@@ -3053,13 +3065,13 @@ function renderVmTable(){
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
       <span style="font-family:'Share Tech Mono',monospace;font-size:.74rem;font-weight:700;color:#c084fc;letter-spacing:1.5px;white-space:nowrap;min-width:120px;text-align:right;padding-right:6px;text-shadow:0 0 8px rgba(168,85,247,.35)">TYPE</span>
       <button class="vm-filter-btn${!_vmFilterType?' active':''}" onclick="_vmFilterType=null;renderVmTable()">ALL</button>
-      <button class="vm-filter-btn${_vmFilterType==='VM'?' active':''}" onclick="_vmFilterType=_vmFilterType==='VM'?null:'VM';renderVmTable()">VM</button>
-      <button class="vm-filter-btn${_vmFilterType==='Physical'?' active':''}" onclick="_vmFilterType=_vmFilterType==='Physical'?null:'Physical';renderVmTable()">Physical</button>
+      <button class="vm-filter-btn" style="${_vmFilterType==='VM'?'border-color:rgba(0,229,160,.6);color:#00e5a0;background:rgba(0,229,160,.16)':''}" onclick="_vmFilterType=_vmFilterType==='VM'?null:'VM';renderVmTable()">VM</button>
+      <button class="vm-filter-btn" style="${_vmFilterType==='Physical'?'border-color:rgba(255,107,0,.6);color:#ff9a4a;background:rgba(255,107,0,.16)':''}" onclick="_vmFilterType=_vmFilterType==='Physical'?null:'Physical';renderVmTable()">Physical</button>
     </div>
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
       <span style="font-family:'Share Tech Mono',monospace;font-size:.74rem;font-weight:700;color:#c084fc;letter-spacing:1.5px;white-space:nowrap;min-width:120px;text-align:right;padding-right:6px;text-shadow:0 0 8px rgba(168,85,247,.35)">VM LOCATION</span>
       <button class="vm-filter-btn${!_vmFilterLocation?' active':''}" onclick="_vmFilterLocation=null;renderVmTable()">ALL</button>
-      ${['old-hpe-esxi-01','site-a-esxi-01','site-a-esxi-02','site-a-esxi-03','site-b-esxi-01','site-c-esxi-01'].map(h=>`<button class="vm-filter-btn${_vmFilterLocation===h?' active':''}" onclick="_vmFilterLocation=_vmFilterLocation==='${h}'?null:'${h}';renderVmTable()">${h}</button>`).join('')}
+      ${(()=>{const _lc={'old-hpe-esxi-01':['#ff7070','rgba(199,23,23,.18)','rgba(199,23,23,.6)'],'site-a-esxi-01':['#2dd4bf','rgba(45,212,191,.16)','rgba(45,212,191,.6)'],'site-a-esxi-02':['#14b8a6','rgba(20,184,166,.16)','rgba(20,184,166,.6)'],'site-a-esxi-03':['#0d9488','rgba(13,148,136,.18)','rgba(13,148,136,.6)'],'site-b-esxi-01':['#6ec1ff','rgba(51,153,255,.16)','rgba(51,153,255,.6)'],'site-c-esxi-01':['#ffcc00','rgba(255,204,0,.16)','rgba(255,204,0,.6)']};return ['old-hpe-esxi-01','site-a-esxi-01','site-a-esxi-02','site-a-esxi-03','site-b-esxi-01','site-c-esxi-01'].map(h=>{const[c,bg,bc]=_lc[h];const on=_vmFilterLocation===h;return `<button class="vm-filter-btn" style="${on?`border-color:${bc};color:${c};background:${bg}`:''}" onclick="_vmFilterLocation=_vmFilterLocation==='${h}'?null:'${h}';renderVmTable()">${h}</button>`;}).join('');})()}
     </div>
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">
       <button class="vm-filter-btn" style="border-color:var(--danger);color:var(--danger);border-width:2px;padding:7px 16px;font-size:.78rem;font-weight:600;letter-spacing:1px" onclick="_vmSearch='';document.getElementById('vmSearchInput').value='';_vmFilterOs=null;_vmFilterSite=null;_vmFilterSubnet=null;_vmFilterType=null;_vmFilterLocation=null;renderVmTable()" title="ล้างทุกการค้นหาและกรอง">✕ CLEAR FILTER</button>
