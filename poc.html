@@ -3143,22 +3143,19 @@ function _fbStartSync(){
   if(_fbVm){
     _fbVm.on('value',snap=>{
       const raw=snap.val();
-      if(!raw){
-        // Firebase truly empty — seed it (first-time setup only)
-        if(!vmInventory.length){
-          vmInventory=[...VM_SEED];
-          _fbPushVm();
-          renderVmTable();
-        }
+      let incoming=[];
+      if(raw){try{incoming=JSON.parse(raw)||[];}catch(e){incoming=[];}}
+      // If Firebase is empty or has no entries, seed it with VM_SEED
+      if(!Array.isArray(incoming)||incoming.length===0){
+        vmInventory=[...VM_SEED];
+        _fbPushVm();
+        renderVmTable();
         return;
       }
-      try{
-        const incoming=JSON.parse(raw);
-        if(JSON.stringify(incoming)!==JSON.stringify(vmInventory)){
-          vmInventory=incoming;
-          renderVmTable();
-        }
-      }catch(e){}
+      if(JSON.stringify(incoming)!==JSON.stringify(vmInventory)){
+        vmInventory=incoming;
+        renderVmTable();
+      }
     },()=>{});
   }
   _fb.on('value',snap=>{
