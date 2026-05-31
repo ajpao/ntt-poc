@@ -2745,6 +2745,7 @@ function openVmInventory(){
   document.getElementById('pg-landing').style.display='none';
   document.getElementById('pg-sim').style.display='none';
   document.getElementById('pg-vm').style.display='flex';
+  if(!_vmSortIp)_vmSortIp='asc';  // default sort by IP ascending
   renderVmTable();
 }
 function closeVmInventory(){
@@ -2767,7 +2768,7 @@ function cancelVmForm(){
   f.classList.add('hidden');
   ['vf-name','vf-os','vf-ip','vf-hostname','vf-func','vf-edit-id'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
-let _vmSearch='',_vmFilterOs=null,_vmFilterSite=null,_vmSortIp=null;
+let _vmSearch='',_vmFilterOs=null,_vmFilterSite=null,_vmSortIp=null,_vmSearchTimer=null;
 function _ipToNum(ip){const p=(ip||'').split('.').map(Number);return((p[0]||0)<<24)|((p[1]||0)<<16)|((p[2]||0)<<8)|(p[3]||0);}
 function _siteCls(site){
   const m={'Old Cluster':'old','Site A (DC)':'siteA','Site B (MM)':'siteB','Site C (DR)':'siteC','Management':'mgmt','Backup':'backup'};
@@ -2828,7 +2829,7 @@ function renderVmTable(){
   <div class="vm-toolbar" style="flex-direction:column;gap:10px;align-items:stretch">
     <div style="display:flex;align-items:center;gap:8px">
       <div style="position:relative;flex:1">
-        <input class="vm-search" type="text" placeholder="🔍  ค้นหา name / IP / OS / site / function..." value="${esc(_vmSearch)}" oninput="_vmSearch=this.value;renderVmTable()" style="width:100%;padding-right:32px"/>
+        <input class="vm-search" type="text" placeholder="🔍  ค้นหา name / IP / OS / site / function..." value="${esc(_vmSearch)}" oninput="clearTimeout(_vmSearchTimer);const val=this.value;_vmSearch=val;_vmSearchTimer=setTimeout(()=>renderVmTable(),200)" style="width:100%;padding-right:32px"/>
         ${_vmSearch?`<button onclick="_vmSearch='';renderVmTable()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--dim);cursor:pointer;font-size:.9rem;line-height:1;padding:0" title="ล้างการค้นหา">✕</button>`:''}
       </div>
       <span class="vm-count" style="margin-left:0">${list.length} / ${vmInventory.length} รายการ</span>
