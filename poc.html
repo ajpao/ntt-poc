@@ -2556,6 +2556,7 @@ function updateNoteUIFromStore(){
 function startFirebaseSync(){
   setSyncStatus('connecting');
   _fbRef.on('value',snap=>{
+    if(running)return; // skip Firebase overwrite while simulation is animating
     const data=snap.val()||{};
     if(data.stepStatuses){try{stepStatusStore=JSON.parse(data.stepStatuses)||{};}catch(e){}}
     if(data.stepNotes){try{stepNotesStore=JSON.parse(data.stepNotes)||{};}catch(e){}}
