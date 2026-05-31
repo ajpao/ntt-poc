@@ -123,6 +123,11 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
 .vm-site-tag.mgmt{background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.35);color:#c084fc}
 .vm-site-tag.backup{background:rgba(255,107,0,.12);border:1px solid rgba(255,107,0,.35);color:#ff9a4a}
 .vm-site-tag.other{background:rgba(123,140,174,.12);border:1px solid rgba(123,140,174,.3);color:var(--dim)}
+.vm-type-tag{font-family:'Share Tech Mono',monospace;font-size:.6rem;padding:2px 7px;border-radius:4px;white-space:nowrap;cursor:pointer;transition:.15s}
+.vm-type-tag.vm{background:rgba(0,229,160,.12);border:1px solid rgba(0,229,160,.35);color:#00e5a0}
+.vm-type-tag.vm:hover{background:rgba(0,229,160,.28)}
+.vm-type-tag.physical{background:rgba(255,107,0,.12);border:1px solid rgba(255,107,0,.35);color:#ff9a4a}
+.vm-type-tag.physical:hover{background:rgba(255,107,0,.28)}
 .vm-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px 12px;background:#0a1120;border:1px solid var(--border);border-radius:8px}
 .vm-search{flex:1;min-width:180px;background:#091220;border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.78rem;padding:6px 10px;outline:none;transition:.2s}
 .vm-search:focus{border-color:var(--purple);box-shadow:0 0 0 2px rgba(168,85,247,.12)}
@@ -2823,7 +2828,7 @@ function cancelVmForm(){
   if(f)f.classList.add('hidden');
   ['vf-name','vf-os','vf-ip','vf-hostname','vf-func','vf-edit-id'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
-let _vmSearch='',_vmFilterOs=null,_vmFilterSite=null,_vmFilterSubnet=null,_vmSortIp=null,_vmSortName=null,_vmSearchTimer=null;
+let _vmSearch='',_vmFilterOs=null,_vmFilterSite=null,_vmFilterSubnet=null,_vmFilterType=null,_vmSortIp=null,_vmSortName=null,_vmSearchTimer=null;
 let _vmEditingId=null;
 let vmTrash=[];
 // Trash lives in Firebase /poc-vm-trash — synced across all sessions
@@ -2865,6 +2870,7 @@ function saveVmEntry(){
     ip:(document.getElementById('vf-ip').value||'').trim(),
     hostname:(document.getElementById('vf-hostname').value||'').trim(),
     site:(document.getElementById('vf-site').value||'').trim(),
+    type:(document.getElementById('vf-type').value||'').trim(),
     func:(document.getElementById('vf-func').value||'').trim(),
     updatedAt:Date.now()
   };
@@ -2941,6 +2947,7 @@ async function saveEditVm(id){
   const nameEl=document.getElementById('vm-edit-name-'+id);
   const hostEl=document.getElementById('vm-edit-hostname-'+id);
   const siteEl=document.getElementById('vm-edit-site-'+id);
+  const typeEl=document.getElementById('vm-edit-type-'+id);
   const osEl=document.getElementById('vm-edit-os-'+id);
   const ipEl=document.getElementById('vm-edit-ip-'+id);
   const funcEl=document.getElementById('vm-edit-func-'+id);
@@ -2950,6 +2957,7 @@ async function saveEditVm(id){
   v.name=name;
   v.hostname=(hostEl?.value||'').trim();
   v.site=(siteEl?.value||'').trim();
+  v.type=(typeEl?.value||'').trim();
   v.os=(osEl?.value||'').trim();
   v.ip=(ipEl?.value||'').trim();
   v.func=(funcEl?.value||'').trim();
@@ -2970,6 +2978,7 @@ function renderVmTable(){
   if(_vmFilterOs)list=list.filter(v=>v.os===_vmFilterOs);
   if(_vmFilterSite)list=list.filter(v=>v.site===_vmFilterSite);
   if(_vmFilterSubnet)list=list.filter(v=>_getVlanId(v.ip)===_vmFilterSubnet);
+  if(_vmFilterType)list=list.filter(v=>(v.type||'')===_vmFilterType);
   // sort by Name
   if(_vmSortName==='asc')list.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   else if(_vmSortName==='desc')list.sort((a,b)=>(b.name||'').localeCompare(a.name||''));
@@ -3010,6 +3019,12 @@ function renderVmTable(){
       <button class="vm-filter-btn${!_vmFilterSubnet?' active-site':''}" onclick="_vmFilterSubnet=null;renderVmTable()">ALL</button>
       ${VM_VLANS.map(v=>`<button class="vm-filter-btn${_vmFilterSubnet===v.id?' active-site':''}" onclick="_vmFilterSubnet=_vmFilterSubnet==='${v.id}'?null:'${v.id}';renderVmTable()" title="${v.desc} ${v.range}">${v.name}</button>`).join('')}
     </div>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
+      <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap;min-width:34px">TYPE:</span>
+      <button class="vm-filter-btn${!_vmFilterType?' active':''}" onclick="_vmFilterType=null;renderVmTable()">ALL</button>
+      <button class="vm-filter-btn${_vmFilterType==='VM'?' active':''}" style="${_vmFilterType==='VM'?'border-color:#00e5a0;color:#00e5a0;background:rgba(0,229,160,.12)':''}" onclick="_vmFilterType=_vmFilterType==='VM'?null:'VM';renderVmTable()">VM</button>
+      <button class="vm-filter-btn${_vmFilterType==='Physical'?' active':''}" style="${_vmFilterType==='Physical'?'border-color:#ff9a4a;color:#ff9a4a;background:rgba(255,107,0,.12)':''}" onclick="_vmFilterType=_vmFilterType==='Physical'?null:'Physical';renderVmTable()">Physical</button>
+    </div>
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">
       <button class="vm-filter-btn" style="border-color:var(--danger);color:var(--danger);border-width:2px;padding:7px 16px;font-size:.78rem;font-weight:600;letter-spacing:1px" onclick="_vmSearch='';document.getElementById('vmSearchInput').value='';_vmFilterOs=null;_vmFilterSite=null;_vmFilterSubnet=null;renderVmTable()" title="ล้างทุกการค้นหาและกรอง">✕ CLEAR FILTER</button>
     </div>
@@ -3021,11 +3036,12 @@ function renderVmTable(){
     <div class="vm-field" style="grid-column:1"><label style="font-size:.62rem">NAME</label><input id="vf-name" type="text" style="width:100%;font-size:.75rem;padding:5px 8px"/></div>
     <div class="vm-field" style="grid-column:2"><label style="font-size:.62rem">HOSTNAME</label><input id="vf-hostname" type="text" style="width:100%;font-size:.75rem;padding:5px 8px"/></div>
     <div class="vm-field" style="grid-column:3"><label style="font-size:.62rem">SITE</label><select id="vf-site" style="background:#091220;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:5px 6px;outline:none;width:100%"><option value="">— Site —</option><option value="Management">Management</option><option value="Old Cluster">Old Cluster</option><option value="Site A (DC)">Site A (DC)</option><option value="Site B (MM)">Site B (MM)</option><option value="Site C (DR)">Site C (DR)</option><option value="Backup">Backup</option><option value="Other">Other</option></select></div>
-    <div class="vm-field" style="grid-column:4"><label style="font-size:.62rem">OS</label><select id="vf-os" style="background:#091220;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:5px 6px;outline:none;width:100%;max-width:100%"><option value="">— Select or add new —</option></select></div>
-    <div class="vm-field" style="grid-column:5"><label style="font-size:.62rem">IP</label><input id="vf-ip" type="text" style="width:100%;font-size:.75rem;padding:5px 8px"/></div>
-    <div class="vm-field" style="grid-column:6"><label style="font-size:.62rem">FUNCTION / ROLE</label><input id="vf-func" type="text" style="width:100%;font-size:.75rem;padding:5px 8px"/></div>
+    <div class="vm-field" style="grid-column:4"><label style="font-size:.62rem">TYPE</label><select id="vf-type" style="background:#091220;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:5px 6px;outline:none;width:100%"><option value="">— Type —</option><option value="VM">VM</option><option value="Physical">Physical</option></select></div>
+    <div class="vm-field" style="grid-column:5"><label style="font-size:.62rem">OS</label><select id="vf-os" style="background:#091220;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:5px 6px;outline:none;width:100%;max-width:100%"><option value="">— Select or add new —</option></select></div>
+    <div class="vm-field" style="grid-column:6"><label style="font-size:.62rem">IP</label><input id="vf-ip" type="text" style="width:100%;font-size:.75rem;padding:5px 8px"/></div>
+    <div class="vm-field" style="grid-column:7"><label style="font-size:.62rem">FUNCTION / ROLE</label><input id="vf-func" type="text" style="width:100%;font-size:.75rem;padding:5px 8px"/></div>
     <input type="hidden" id="vf-edit-id"/>
-    <div style="grid-column:7;display:flex;gap:4px">
+    <div style="grid-column:8;display:flex;gap:4px">
       <button class="vm-btn cancel" onclick="cancelVmForm()" style="padding:5px 10px;font-size:.65rem">CANCEL</button>
       <button class="vm-btn save" onclick="saveVmEntry()" style="padding:5px 10px;font-size:.65rem">✓ SAVE</button>
     </div>
@@ -3037,6 +3053,7 @@ function renderVmTable(){
       <th class="sortable ${nameCls}" onclick="_vmSortName=_vmSortName==='asc'?'desc':_vmSortName==='desc'?null:'asc';renderVmTable()">VM / NODE NAME <span class="sort-icon">${nameIcon}</span></th>
       <th>HOSTNAME</th>
       <th>SITE</th>
+      <th>TYPE</th>
       <th>OS</th>
       <th class="sortable ${ipCls}" onclick="_vmSortIp=_vmSortIp==='asc'?'desc':_vmSortIp==='desc'?null:'asc';renderVmTable()">IP ADDRESS <span class="sort-icon">${ipIcon}</span></th>
       <th>FUNCTION / ROLE</th>
@@ -3050,6 +3067,7 @@ function renderVmTable(){
       <td><input id="vm-edit-name-${v.id}" type="text" value="${esc(v.name||'')}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"/></td>
       <td><input id="vm-edit-hostname-${v.id}" type="text" value="${esc(v.hostname||'')}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"/></td>
       <td><select id="vm-edit-site-${v.id}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"><option value="">— Site —</option><option value="Management" ${v.site==='Management'?'selected':''}>Management</option><option value="Old Cluster" ${v.site==='Old Cluster'?'selected':''}>Old Cluster</option><option value="Site A (DC)" ${v.site==='Site A (DC)'?'selected':''}>Site A (DC)</option><option value="Site B (MM)" ${v.site==='Site B (MM)'?'selected':''}>Site B (MM)</option><option value="Site C (DR)" ${v.site==='Site C (DR)'?'selected':''}>Site C (DR)</option><option value="Backup" ${v.site==='Backup'?'selected':''}>Backup</option><option value="Other" ${v.site==='Other'?'selected':''}>Other</option></select></td>
+      <td><select id="vm-edit-type-${v.id}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"><option value="">— Type —</option><option value="VM" ${v.type==='VM'?'selected':''}>VM</option><option value="Physical" ${v.type==='Physical'?'selected':''}>Physical</option></select></td>
       <td><select id="vm-edit-os-${v.id}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none">${_buildOsDropdownHtml(v.os)}</select></td>
       <td><input id="vm-edit-ip-${v.id}" type="text" value="${esc(v.ip||'')}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"/></td>
       <td><input id="vm-edit-func-${v.id}" type="text" value="${esc(v.func||'')}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"/></td>
@@ -3061,6 +3079,7 @@ function renderVmTable(){
       <td style="font-family:'Share Tech Mono',monospace;color:var(--ok);font-size:.76rem">${esc(v.name)}</td>
       <td style="font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--dim)">${esc(v.hostname||'—')}</td>
       <td><span class="vm-site-tag ${_siteCls(v.site)}" onclick="_vmFilterSite=_vmFilterSite==='${v.site.replace(/'/g,"\\'")}'?null:'${v.site.replace(/'/g,"\\'")}';renderVmTable()" title="คลิกเพื่อ filter Site นี้" style="cursor:pointer">${esc(v.site||'—')}</span></td>
+      <td>${v.type?`<span class="vm-type-tag ${v.type==='VM'?'vm':'physical'}" onclick="_vmFilterType=_vmFilterType==='${v.type}'?null:'${v.type}';renderVmTable()" title="คลิกเพื่อ filter Type นี้">${esc(v.type)}</span>`:'<span style="color:var(--dim);font-size:.72rem">—</span>'}</td>
       <td><span class="vm-os-tag" onclick="_vmFilterOs=_vmFilterOs==='${v.os.replace(/'/g,"\\'")}'?null:'${v.os.replace(/'/g,"\\'")}';renderVmTable()" title="คลิกเพื่อ filter OS นี้">${esc(v.os||'—')}</span></td>
       <td style="font-family:'Share Tech Mono',monospace;color:var(--info);font-size:.76rem">${esc(v.ip||'—')}</td>
       <td style="font-size:.76rem;color:var(--dim);max-width:320px;word-break:break-word">${esc(v.func||'—')}</td>

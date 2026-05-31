@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Firebase Migration — OOB + Type Field</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+body{font-family:'Share Tech Mono',monospace,sans-serif;background:#060a14;color:#e0eaff;padding:30px;max-width:960px;margin:0 auto;line-height:1.7}
+h1{color:#ff6b00;letter-spacing:2px}h2{color:#a855f7;margin-top:28px}
+button{font-family:'Share Tech Mono',monospace;font-size:.9rem;padding:12px 22px;background:#ff6b00;color:#fff;border:none;border-radius:6px;cursor:pointer;letter-spacing:2px;margin:6px 4px}
+button:disabled{background:#7b8cae;cursor:not-allowed}
+button.green{background:#00a06e}button.purple{background:#7c3aed}
+.log{background:#0c1424;border:1px solid #1d2f50;border-radius:6px;padding:14px;margin-top:20px;font-size:.82rem;min-height:60px;white-space:pre-wrap;max-height:360px;overflow-y:auto}
+.ok{color:#00e5a0}.err{color:#ff3355}.warn{color:#ffcc00}.info{color:#3399ff}
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:.75rem}
+th,td{border:1px solid #1d2f50;padding:5px 8px;text-align:left}
+th{background:#0a1120;color:#a855f7}
+.vm-tag{background:rgba(0,229,160,.12);border:1px solid rgba(0,229,160,.35);color:#00e5a0;padding:1px 7px;border-radius:4px;font-size:.68rem}
+.phy-tag{background:rgba(255,107,0,.12);border:1px solid rgba(255,107,0,.35);color:#ff9a4a;padding:1px 7px;border-radius:4px;font-size:.68rem}
+</style>
+</head>
+<body>
+<h1>🔧 Firebase Migration</h1>
+<p>Step 1: Append OOB entries &nbsp;|&nbsp; Step 2: Add "type" field to all records</p>
+
+<button class="green" id="btnAll" onclick="doAll()">🚀 RUN ALL (OOB + Type Migration)</button>
+<button onclick="doRead()">👁 READ CURRENT /poc-vm</button>
+
+<div class="log" id="log">Ready.</div>
+
+<h2>OOB entries to append (5 rows):</h2>
+<table>
+  <tr><th>#</th><th>NAME</th><th>SITE</th><th>TYPE</th><th>OS</th><th>IP</th></tr>
+  <tr><td>1</td><td>site-a-esxi-01 - H3C HDM</td><td>Site A (DC)</td><td><span class="phy-tag">Physical</span></td><td>H3C HDM</td><td>172.31.10.110</td></tr>
+  <tr><td>2</td><td>site-a-esxi-02 - H3C HDM</td><td>Site A (DC)</td><td><span class="phy-tag">Physical</span></td><td>H3C HDM</td><td>172.31.10.111</td></tr>
+  <tr><td>3</td><td>site-a-esxi-03 - H3C HDM</td><td>Site A (DC)</td><td><span class="phy-tag">Physical</span></td><td>H3C HDM</td><td>172.31.10.112</td></tr>
+  <tr><td>4</td><td>site-b-esxi-01 - Lenovo IMM</td><td>Site B (MM)</td><td><span class="phy-tag">Physical</span></td><td>Lenovo IMM</td><td>172.31.10.113</td></tr>
+  <tr><td>5</td><td>site-c-esxi-01 - H3C HDM</td><td>Site C (DR)</td><td><span class="phy-tag">Physical</span></td><td>H3C HDM</td><td>172.31.10.114</td></tr>
+</table>
+
+<h2>Type mapping for existing 21 rows:</h2>
+<table>
+  <tr><th>ID</th><th>NAME</th><th>TYPE</th></tr>
+  <tr><td>seed-02</td><td>vcenter-old-01</td><td><span class="vm-tag">VM</span></td></tr>
+  <tr><td>seed-01</td><td>old-hpe-esxi-01</td><td><span class="phy-tag">Physical</span></td></tr>
+  <tr><td>seed-dns</td><td>dc-01</td><td><span class="vm-tag">VM</span></td></tr>
+  <tr><td>seed-03</td><td>vcenter-new-01 (Active)</td><td><span class="vm-tag">VM</span></td></tr>
+  <tr><td>seed-04</td><td>vcenter-new-01 (Passive)</td><td><span class="vm-tag">VM</span></td></tr>
+  <tr><td>seed-05</td><td>vcenter-new-01 (Witness)</td><td><span class="vm-tag">VM</span></td></tr>
+  <tr><td>seed-06</td><td>site-a-esxi-01</td><td><span class="phy-tag">Physical</span></td></tr>
+  <tr><td>seed-07</td><td>site-a-esxi-02</td><td><span class="phy-tag">Physical</span></td></tr>
+  <tr><td>seed-08</td><td>site-a-esxi-03</td><td><span class="phy-tag">Physical</span></td></tr>
+  <tr><td>seed-09</td><td>site-b-esxi-01</td><td><span class="phy-tag">Physical</span></td></tr>
+  <tr><td>seed-10</td><td>site-c-esxi-01</td><td><span class="phy-tag">Physical</span></td></tr>
+  <tr><td>seed-11</td><td>backup-srv-01</td><td><span class="vm-tag">VM</span></td></tr>
+  <tr><td>seed-12</td><td>nas-01</td><td><span class="vm-tag">VM</span></td></tr>
+  <tr><td>seed-ilo-old</td><td>old-hpe-esxi-01-iLO</td><td><span class="phy-tag">Physical</span></td></tr>
+  <tr><td>seed-vc-vmot-1</td><td>vcenter-new-01 (Active) - vMotion</td><td><span class="vm-tag">VM</span></td></tr>
+  <tr><td>seed-vc-vmot-2</td><td>vcenter-new-01 (Passive) - vMotion</td><td><span class="vm-tag">VM</span></td></tr>
+  <tr><td>seed-vc-vmot-3</td><td>vcenter-new-01 (Witness) - vMotion</td><td><span class="vm-tag">VM</span></td></tr>
+  <tr><td>seed-vm2</td><td>VM2</td><td><span class="vm-tag">VM</span></td></tr>
+  <tr><td>seed-vm3</td><td>VM3</td><td><span class="vm-tag">VM</span></td></tr>
+  <tr><td>seed-vm4</td><td>VM4</td><td><span class="vm-tag">VM</span></td></tr>
+  <tr><td>seed-vm5</td><td>VM5</td><td><span class="vm-tag">VM</span></td></tr>
+</table>
+
+<script>
+const TYPE_MAP={
+  'seed-02':'VM','seed-01':'Physical','seed-dns':'VM',
+  'seed-03':'VM','seed-04':'VM','seed-05':'VM',
+  'seed-06':'Physical','seed-07':'Physical','seed-08':'Physical',
+  'seed-09':'Physical','seed-10':'Physical',
+  'seed-11':'VM','seed-12':'VM',
+  'seed-ilo-old':'Physical',
+  'seed-vc-vmot-1':'VM','seed-vc-vmot-2':'VM','seed-vc-vmot-3':'VM',
+  'seed-vm2':'VM','seed-vm3':'VM','seed-vm4':'VM','seed-vm5':'VM',
+};
+
+const NEW_OOB=[
+  {id:'oob-site-a-esxi-01',name:'site-a-esxi-01 - H3C HDM',hostname:'site-a-esxi-01-hdm',site:'Site A (DC)',type:'Physical',
+   os:'H3C HDM',ip:'172.31.10.110',func:'H3C HDM — Out-of-Band Management, ESXi Host 1 Site A DC',updatedAt:Date.now()},
+  {id:'oob-site-a-esxi-02',name:'site-a-esxi-02 - H3C HDM',hostname:'site-a-esxi-02-hdm',site:'Site A (DC)',type:'Physical',
+   os:'H3C HDM',ip:'172.31.10.111',func:'H3C HDM — Out-of-Band Management, ESXi Host 2 Site A DC',updatedAt:Date.now()},
+  {id:'oob-site-a-esxi-03',name:'site-a-esxi-03 - H3C HDM',hostname:'site-a-esxi-03-hdm',site:'Site A (DC)',type:'Physical',
+   os:'H3C HDM',ip:'172.31.10.112',func:'H3C HDM — Out-of-Band Management, ESXi Host 3 Site A DC',updatedAt:Date.now()},
+  {id:'oob-site-b-esxi-01',name:'site-b-esxi-01 - Lenovo IMM',hostname:'site-b-esxi-01-imm',site:'Site B (MM)',type:'Physical',
+   os:'Lenovo IMM',ip:'172.31.10.113',func:'Lenovo IMM — Out-of-Band Management, ESXi Host 4 Site B MM',updatedAt:Date.now()},
+  {id:'oob-site-c-esxi-01',name:'site-c-esxi-01 - H3C HDM',hostname:'site-c-esxi-01-hdm',site:'Site C (DR)',type:'Physical',
+   os:'H3C HDM',ip:'172.31.10.114',func:'H3C HDM — Out-of-Band Management, ESXi Host 5 Site C DR | Login: admin / Password@_',updatedAt:Date.now()},
+];
+
+let fbVm=null;
+try{
+  firebase.initializeApp({
+    apiKey:"AIzaSyB1tDvD2NLYCyxQqA_WxKNF6LnTWUfVtEM",
+    authDomain:"ntt-poc-22474.firebaseapp.com",
+    projectId:"ntt-poc-22474",
+    storageBucket:"ntt-poc-22474.firebasestorage.app",
+    messagingSenderId:"1082839485570",
+    appId:"1:1082839485570:web:f3fa78b89bef78ee5d389b",
+    databaseURL:"https://ntt-poc-22474-default-rtdb.asia-southeast1.firebasedatabase.app"
+  });
+  fbVm=firebase.database().ref('poc-vm');
+  log('Firebase connected to /poc-vm','ok');
+}catch(e){log('Firebase init failed: '+e.message,'err');}
+
+function log(msg,cls=''){
+  const el=document.getElementById('log');
+  const time=new Date().toLocaleTimeString();
+  el.innerHTML+=`\n<span class="${cls}">[${time}] ${msg}</span>`;
+  el.scrollTop=el.scrollHeight;
+}
+
+async function doAll(){
+  if(!fbVm)return log('Firebase not ready','err');
+  const btn=document.getElementById('btnAll');btn.disabled=true;
+  log('Reading current /poc-vm...','info');
+  try{
+    const snap=await fbVm.once('value');
+    const raw=snap.val();
+    let current=[];
+    if(raw){try{current=JSON.parse(raw)||[];}catch(e){current=[];}}
+    log('Current entries: '+current.length,'info');
+
+    // Step 1: Migrate type field on existing records
+    let typeUpdated=0;
+    current=current.map(v=>{
+      if(TYPE_MAP[v.id]&&v.type!==TYPE_MAP[v.id]){
+        typeUpdated++;
+        log(`  type: ${v.name} → ${TYPE_MAP[v.id]}','ok`);
+        return {...v,type:TYPE_MAP[v.id]};
+      }
+      return v;
+    });
+    log(`Step 1: Updated type on ${typeUpdated} existing records.`,'ok');
+
+    // Step 2: Append OOB entries
+    let added=0;
+    for(const entry of NEW_OOB){
+      if(!current.find(x=>x.id===entry.id)){
+        current.push({...entry,updatedAt:Date.now()});
+        added++;
+        log(`  + OOB added: ${entry.name} (${entry.ip})`,'ok');
+      }else{
+        log(`  ~ OOB skipped (exists): ${entry.name}`,'warn');
+      }
+    }
+    log(`Step 2: Added ${added} OOB entries. Total: ${current.length}`,'ok');
+
+    // Push all back
+    await fbVm.set(JSON.stringify(current));
+    log('✓ Migration complete! Firebase updated.','ok');
+  }catch(e){log('✗ Failed: '+e.message,'err');}
+  btn.disabled=false;
+}
+
+async function doRead(){
+  if(!fbVm)return log('Firebase not ready','err');
+  try{
+    const snap=await fbVm.once('value');
+    const raw=snap.val();
+    if(!raw){log('Firebase /poc-vm is EMPTY','warn');return;}
+    const arr=JSON.parse(raw);
+    log(`Firebase has ${arr.length} entries:`,'ok');
+    arr.forEach((v,i)=>log(`  ${String(i+1).padStart(2,' ')}. [${(v.type||'?').padEnd(8,' ')}] ${v.name} — ${v.ip}`,''));
+  }catch(e){log('✗ Read failed: '+e.message,'err');}
+}
+</script>
+</body>
+</html>
