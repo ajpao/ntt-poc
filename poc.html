@@ -854,18 +854,23 @@ const cases={
 };
 let selected=null,currentPart=null,currentCase=null,running=false;
 let currentStepFilter='all',celebTimer=null;
-// ── Firebase Realtime Database ──────────────────────────────────────────────
-const _fbConfig={
-  apiKey:"AIzaSyB1tDvD2NLYCyxQqA_WxKNF6LnTWUfVtEM",
-  authDomain:"ntt-poc-22474.firebaseapp.com",
-  projectId:"ntt-poc-22474",
-  storageBucket:"ntt-poc-22474.firebasestorage.app",
-  messagingSenderId:"1082839485570",
-  appId:"1:1082839485570:web:f3fa78b89bef78ee5d389b",
-  databaseURL:"https://ntt-poc-22474-default-rtdb.asia-southeast1.firebasedatabase.app"
-};
-firebase.initializeApp(_fbConfig);
-const _fbRef=firebase.database().ref('poc');
+// ── Firebase Realtime Database (optional — falls back to localStorage) ──────
+let _fbRef=null;
+let _fbOk=false;
+try{
+  const _fbConfig={
+    apiKey:"AIzaSyB1tDvD2NLYCyxQqA_WxKNF6LnTWUfVtEM",
+    authDomain:"ntt-poc-22474.firebaseapp.com",
+    projectId:"ntt-poc-22474",
+    storageBucket:"ntt-poc-22474.firebasestorage.app",
+    messagingSenderId:"1082839485570",
+    appId:"1:1082839485570:web:f3fa78b89bef78ee5d389b",
+    databaseURL:"https://ntt-poc-22474-default-rtdb.asia-southeast1.firebasedatabase.app"
+  };
+  firebase.initializeApp(_fbConfig);
+  _fbRef=firebase.database().ref('poc');
+  _fbOk=true;
+}catch(e){console.warn('Firebase init failed, using localStorage',e);}
 // ────────────────────────────────────────────────────────────────────────────
 const STEP_STATUS_KEY='poc_step_status_v1';
 const STEP_STATUSES=[
@@ -878,9 +883,13 @@ let stepStatusStore={};
 const STEP_NOTES_KEY='poc_step_notes_v1';
 let stepNotesStore={};
 const openNoteKeys=new Set();
-function loadStepNotes(){/* handled by Firebase onValue */}
+function loadStepNotes(){
+  try{stepNotesStore=JSON.parse(localStorage.getItem(STEP_NOTES_KEY)||'{}')||{};}
+  catch(e){stepNotesStore={};}
+}
 function saveStepNotes(){
-  _fbRef.child('stepNotes').set(JSON.stringify(stepNotesStore)).catch(e=>console.error('FB',e));
+  try{localStorage.setItem(STEP_NOTES_KEY,JSON.stringify(stepNotesStore));}catch(e){}
+  if(_fbOk)_fbRef.child('stepNotes').set(JSON.stringify(stepNotesStore)).catch(e=>console.error('FB',e));
 }
 function getNote(index){
   const key=caseKey();
@@ -973,9 +982,13 @@ function toggleNote(index){
   else{openNoteKeys.add(key);noteArea.style.display='block';noteArea.querySelector('textarea')?.focus();}
 }
 function nowTs(){return new Date().toLocaleTimeString('th-TH',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});}
-function loadStepStatuses(){/* handled by Firebase onValue */}
+function loadStepStatuses(){
+  try{stepStatusStore=JSON.parse(localStorage.getItem(STEP_STATUS_KEY)||'{}')||{};}
+  catch(e){stepStatusStore={};}
+}
 function saveStepStatuses(){
-  _fbRef.child('stepStatuses').set(JSON.stringify(stepStatusStore)).catch(e=>console.error('FB',e));
+  try{localStorage.setItem(STEP_STATUS_KEY,JSON.stringify(stepStatusStore));}catch(e){}
+  if(_fbOk)_fbRef.child('stepStatuses').set(JSON.stringify(stepStatusStore)).catch(e=>console.error('FB',e));
 }
 function caseKey(){
   return currentPart&&currentCase?`${currentPart}:${currentCase.id}`:'';
@@ -2554,20 +2567,28 @@ function updateNoteUIFromStore(){
   });
 }
 function startFirebaseSync(){
+  if(!_fbOk){setSyncStatus('error');return;}
   setSyncStatus('connecting');
   _fbRef.on('value',snap=>{
-    const data=snap.val()||{};
-    if(running)return;
-    if(data.stepStatuses){try{stepStatusStore=JSON.parse(data.stepStatuses)||{};}catch(e){}}
-    if(data.stepNotes){try{stepNotesStore=JSON.parse(data.stepNotes)||{};}catch(e){}}
-    renderSteps();
-    updateProgressBar();
-    updateNoteUIFromStore();
-    setSyncStatus('synced');
+    try{
+      const data=snap.val()||{};
+      if(running){setSyncStatus('synced');return;}
+      const inStatuses=data.stepStatuses||'{}';
+      const inNotes=data.stepNotes||'{}';
+      const localStatuses=JSON.stringify(stepStatusStore);
+      const localNotes=JSON.stringify(stepNotesStore);
+      if(inStatuses===localStatuses&&inNotes===localNotes){setSyncStatus('synced');return;}
+      stepStatusStore=JSON.parse(inStatuses)||{};
+      stepNotesStore=JSON.parse(inNotes)||{};
+      localStorage.setItem(STEP_STATUS_KEY,inStatuses);
+      localStorage.setItem(STEP_NOTES_KEY,inNotes);
+      if(currentCase){renderSteps();updateProgressBar();updateCaseStatusFromSteps();updateNoteUIFromStore();}
+      setSyncStatus('synced');
+    }catch(e){console.error('FB onValue',e);}
   },err=>{console.error('FB',err);setSyncStatus('error');});
 }
 window.onload=()=>{
-  loadDiagramSettings();applyDiagramSettings();
+  loadDiagramSettings();loadStepStatuses();loadStepNotes();applyDiagramSettings();
   const session=loadSession();
   if(session&&session.part&&cases[session.part])selectMode(session.part);
   else selectMode('hyper');
