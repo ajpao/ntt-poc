@@ -132,8 +132,10 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
 .vm-filter-btn.active{border-color:var(--purple);color:#c084fc;background:rgba(168,85,247,.15)}
 .vm-filter-btn.active-site{border-color:var(--ok);color:var(--ok);background:rgba(0,229,160,.1)}
 .vm-count{font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--dim);margin-left:auto;white-space:nowrap}
-.vm-add-form{display:none;background:rgba(16,26,46,.6);border:1px solid rgba(168,85,247,.35);border-radius:8px;padding:12px;margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.vm-add-form{display:none;background:#0a1628;border:1px solid rgba(168,85,247,.4);border-radius:8px;padding:16px;margin:16px auto;max-width:560px;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px;box-shadow:0 0 20px rgba(168,85,247,.15)}
 .vm-add-form.hidden{display:none!important}
+.vm-add-form:not(.hidden){animation:slideDown .3s ease-out}
+@keyframes slideDown{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
 .vm-field{display:flex;flex-direction:column;gap:4px}
 .vm-field label{font-family:'Share Tech Mono',monospace;font-size:.64rem;color:var(--dim);letter-spacing:1px}
 .vm-field input,.vm-field textarea{background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Noto Sans Thai','Share Tech Mono',sans-serif;font-size:.8rem;padding:6px 9px;outline:none;transition:.2s}
@@ -918,6 +920,28 @@ opacity:1
     </div>
     <!-- Table -->
     <div id="vmTableWrap"></div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal-ov" id="vmDeleteModal" onclick="vmDeleteBackdrop(event)">
+    <div class="modal-panel" style="width:min(420px,90vw)" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div class="modal-title" style="color:var(--danger)">⚠ DELETE CONFIRMATION</div>
+        <button class="modal-close" type="button" onclick="closeDeleteModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:.82rem;color:var(--text);margin-bottom:16px">
+          ต้องการลบรายการนี้หรือไม่?
+          <div style="margin-top:10px;padding:10px;background:rgba(255,51,85,.1);border:1px solid rgba(255,51,85,.3);border-radius:6px;color:#ff7070;font-weight:600">
+            <span id="vmDeleteName"></span>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="vm-btn cancel" onclick="closeDeleteModal()">CANCEL</button>
+          <button class="vm-btn" style="border-color:var(--danger);background:rgba(255,51,85,.15);color:var(--danger)" onclick="confirmDelete()">✕ DELETE</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2812,10 +2836,23 @@ function saveVmEntry(){
   if(idx>=0)vmInventory[idx]=entry;else vmInventory.push(entry);
   saveVmLocal();_fbPushVm();cancelVmForm();renderVmTable();
 }
+let _vmDeleteId=null;
 function deleteVm(id){
-  if(!confirm('ลบ VM นี้?'))return;
-  vmInventory=vmInventory.filter(v=>v.id!==id);
+  const vm=vmInventory.find(v=>v.id===id);if(!vm)return;
+  _vmDeleteId=id;
+  document.getElementById('vmDeleteName').textContent=`${vm.name} (${vm.ip||'—'})`;
+  document.getElementById('vmDeleteModal').classList.add('open');
+}
+function closeDeleteModal(){
+  _vmDeleteId=null;
+  document.getElementById('vmDeleteModal').classList.remove('open');
+}
+function vmDeleteBackdrop(e){if(e.target.id==='vmDeleteModal')closeDeleteModal();}
+function confirmDelete(){
+  if(!_vmDeleteId)return;
+  vmInventory=vmInventory.filter(v=>v.id!==_vmDeleteId);
   saveVmLocal();_fbPushVm();renderVmTable();
+  closeDeleteModal();
 }
 function editVm(id){
   const v=vmInventory.find(x=>x.id===id);if(!v)return;
