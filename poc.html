@@ -984,22 +984,24 @@ opacity:1
 
   <!-- Edit VM Modal -->
   <div class="modal-ov" id="vmEditModal" onclick="vmEditBackdrop(event)">
-    <div class="modal-panel" style="width:min(560px,94vw)" role="dialog" aria-modal="true">
+    <div class="modal-panel" style="width:min(1240px,97vw)" role="dialog" aria-modal="true">
       <div class="modal-head">
         <div class="modal-title">✎ EDIT ENTRY</div>
         <button class="modal-close" type="button" onclick="closeEditModal()">&times;</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="em-id"/>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 14px">
-          <div class="vm-field"><label>VM / NODE NAME</label><input id="em-name" type="text"/></div>
-          <div class="vm-field"><label>HOSTNAME</label><input id="em-hostname" type="text"/></div>
-          <div class="vm-field"><label>SITE</label><select id="em-site"><option value="">— Site —</option><option value="Management">Management</option><option value="Old Cluster">Old Cluster</option><option value="Site A (DC)">Site A (DC)</option><option value="Site B (MM)">Site B (MM)</option><option value="Site C (DR)">Site C (DR)</option><option value="Backup">Backup</option><option value="Other">Other</option></select></div>
-          <div class="vm-field"><label>TYPE</label><select id="em-type" onchange="_emTypeChanged()"><option value="">— Type —</option><option value="VM">VM</option><option value="Physical">Physical</option></select></div>
-          <div class="vm-field" id="em-location-wrap"><label>LOCATION (ESXi)</label><select id="em-location"><option value="">— ESXi Host —</option><option value="old-hpe-esxi-01">old-hpe-esxi-01</option><option value="site-a-esxi-01">site-a-esxi-01</option><option value="site-a-esxi-02">site-a-esxi-02</option><option value="site-a-esxi-03">site-a-esxi-03</option><option value="site-b-esxi-01">site-b-esxi-01</option><option value="site-c-esxi-01">site-c-esxi-01</option></select></div>
-          <div class="vm-field"><label>OS</label><select id="em-os"></select></div>
-          <div class="vm-field"><label>IP ADDRESS</label><input id="em-ip" type="text"/></div>
-          <div class="vm-field" style="grid-column:1/-1"><label>FUNCTION / ROLE</label><input id="em-func" type="text"/></div>
+        <div style="overflow-x:auto">
+        <div style="display:flex;gap:10px;align-items:flex-end;min-width:1120px">
+          <div class="vm-field" style="flex:1.4;min-width:150px"><label>VM / NODE NAME</label><input id="em-name" type="text"/></div>
+          <div class="vm-field" style="flex:1.2;min-width:130px"><label>HOSTNAME</label><input id="em-hostname" type="text"/></div>
+          <div class="vm-field" style="flex:1;min-width:120px"><label>SITE</label><select id="em-site"><option value="">— Site —</option><option value="Management">Management</option><option value="Old Cluster">Old Cluster</option><option value="Site A (DC)">Site A (DC)</option><option value="Site B (MM)">Site B (MM)</option><option value="Site C (DR)">Site C (DR)</option><option value="Backup">Backup</option><option value="Other">Other</option></select></div>
+          <div class="vm-field" id="em-location-wrap" style="flex:1.1;min-width:130px"><label>LOCATION (ESXi)</label><select id="em-location"><option value="">— ESXi Host —</option><option value="old-hpe-esxi-01">old-hpe-esxi-01</option><option value="site-a-esxi-01">site-a-esxi-01</option><option value="site-a-esxi-02">site-a-esxi-02</option><option value="site-a-esxi-03">site-a-esxi-03</option><option value="site-b-esxi-01">site-b-esxi-01</option><option value="site-c-esxi-01">site-c-esxi-01</option></select></div>
+          <div class="vm-field" style="flex:.8;min-width:95px"><label>TYPE</label><select id="em-type" onchange="_emTypeChanged()"><option value="">— Type —</option><option value="VM">VM</option><option value="Physical">Physical</option></select></div>
+          <div class="vm-field" style="flex:1.1;min-width:130px"><label>OS</label><select id="em-os"></select></div>
+          <div class="vm-field" style="flex:1;min-width:120px"><label>IP ADDRESS</label><input id="em-ip" type="text"/></div>
+          <div class="vm-field" style="flex:1.6;min-width:170px"><label>FUNCTION / ROLE</label><input id="em-func" type="text"/></div>
+        </div>
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
           <button class="vm-btn cancel" onclick="closeEditModal()">CANCEL</button>
