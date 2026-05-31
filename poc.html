@@ -2802,8 +2802,7 @@ const VM_SEED=[
    func:'Production VM — Ubuntu Linux | Subnet: 255.255.255.0 | GW: 172.31.40.254'},
 ].map(v=>({...v,updatedAt:1700000000003}));
 function loadVmLocal(){
-  try{vmInventory=JSON.parse(localStorage.getItem(VM_LS_KEY)||'[]')||[];}catch(e){vmInventory=[];}
-  if(!vmInventory.length){vmInventory=[...VM_SEED];saveVmLocal();_fbPushVm();}
+  if(!vmInventory.length){vmInventory=[...VM_SEED];_fbPushVm();}
 }
 function saveVmLocal(){try{localStorage.setItem(VM_LS_KEY,JSON.stringify(vmInventory));}catch(e){}}
 let _newOsSelectRef=null;
@@ -2836,7 +2835,9 @@ function confirmNewOs(){
 }
 
 function _buildOsDropdownHtml(currentValue=''){
-  const allOs=[...new Set(vmInventory.map(v=>v.os).filter(Boolean))].sort();
+  const defaultOs=['Ubuntu 24.04','CentOS 8','CentOS Stream 10','Debian 12','Red Hat Enterprise Linux 9','SUSE Linux Enterprise Server 15','Windows Server 2012','Windows Server 2016','Windows Server 2022','Windows Server 2025'];
+  const customOs=[...new Set(vmInventory.map(v=>v.os).filter(o=>o&&!defaultOs.includes(o)))].sort();
+  const allOs=[...defaultOs,...customOs];
   let html=`<option value="">— Select or add new —</option>`;
   html+=allOs.map(o=>`<option value="${o}" ${currentValue===o?'selected':''}>${esc(o)}</option>`).join('');
   html+=`<option value="__new__">+ Add New OS...</option>`;
@@ -2938,7 +2939,7 @@ function saveVmEntry(){
   };
   const idx=vmInventory.findIndex(v=>v.id===entry.id);
   if(idx>=0)vmInventory[idx]=entry;else vmInventory.push(entry);
-  saveVmLocal();_fbPushVm();cancelVmForm();renderVmTable();
+  _fbPushVm();cancelVmForm();renderVmTable();
 }
 let _vmDeleteId=null;
 function deleteVm(id){
@@ -2958,7 +2959,7 @@ function confirmDelete(){
   vmInventory=vmInventory.filter(v=>v.id!==_vmDeleteId);
   vmTrash.push({...vm,deletedAt:Date.now()});
   _purgeExpiredTrash();
-  saveVmLocal();saveVmTrash();_fbPushVm();renderVmTable();
+  saveVmTrash();_fbPushVm();renderVmTable();
   closeDeleteModal();
 }
 function openTrashModal(){
@@ -2984,7 +2985,7 @@ function undoDelete(id){
   const item=vmTrash.find(t=>t.id===id);if(!item)return;
   vmTrash=vmTrash.filter(t=>t.id!==id);
   vmInventory.push(item);
-  saveVmTrash();saveVmLocal();_fbPushVm();renderVmTable();
+  saveVmTrash();_fbPushVm();renderVmTable();
 }
 function editVm(id){
   if(_vmEditingId===id){
@@ -3015,7 +3016,7 @@ function saveEditVm(id){
   v.func=(document.getElementById('vm-edit-func-'+id)?.value||'').trim();
   v.updatedAt=Date.now();
   _vmEditingId=null;
-  saveVmLocal();_fbPushVm();renderVmTable();
+  _fbPushVm();renderVmTable();
 }
 function cancelEditVm(){
   _vmEditingId=null;
@@ -3145,7 +3146,6 @@ function _fbStartSync(){
         const incoming=JSON.parse(raw);
         if(JSON.stringify(incoming)!==JSON.stringify(vmInventory)){
           vmInventory=incoming;
-          saveVmLocal();
           renderVmTable();
         }
       }catch(e){}
