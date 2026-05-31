@@ -2835,26 +2835,25 @@ function confirmNewOs(){
   closeNewOsModal();
 }
 
-function _updateOsDropdown(){
-  const osSelect=document.getElementById('vf-os');if(!osSelect)return;
+function _buildOsDropdownHtml(currentValue=''){
   const allOs=[...new Set(vmInventory.map(v=>v.os).filter(Boolean))].sort();
-  const currentVal=osSelect.value;
   let html=`<option value="">— Select or add new —</option>`;
-  html+=allOs.map(o=>`<option value="${o}">${esc(o)}</option>`).join('');
+  html+=allOs.map(o=>`<option value="${o}" ${currentValue===o?'selected':''}>${esc(o)}</option>`).join('');
   html+=`<option value="__new__">+ Add New OS...</option>`;
-  osSelect.innerHTML=html;
-
-  // Restore previous value if it exists
-  if(currentVal&&currentVal!=='__new__'){
-    osSelect.value=currentVal;
-  }
-
-  // Setup change handler
-  osSelect.onchange=function(){
+  return html;
+}
+function _setupOsDropdownHandler(selectElement){
+  selectElement.onchange=function(){
     if(this.value==='__new__'){
       openNewOsModal(this);
     }
   };
+}
+function _updateOsDropdown(){
+  const osSelect=document.getElementById('vf-os');if(!osSelect)return;
+  const currentVal=osSelect.value;
+  osSelect.innerHTML=_buildOsDropdownHtml(currentVal);
+  _setupOsDropdownHandler(osSelect);
 }
 function openVmInventory(){
   // hide all other pages
@@ -2988,6 +2987,10 @@ function editVm(id){
   _vmEditingId=id;
   renderVmTable();
   setTimeout(()=>{
+    // Setup OS dropdown handler
+    const osSelect=document.getElementById('vm-edit-os-'+id);
+    if(osSelect)_setupOsDropdownHandler(osSelect);
+    // Focus on name input
     const nameInput=document.getElementById('vm-edit-name-'+id);
     if(nameInput)nameInput.focus();
   },100);
@@ -3098,7 +3101,7 @@ function renderVmTable(){
       <td><input id="vm-edit-name-${v.id}" type="text" value="${esc(v.name||'')}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"/></td>
       <td><input id="vm-edit-hostname-${v.id}" type="text" value="${esc(v.hostname||'')}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"/></td>
       <td><select id="vm-edit-site-${v.id}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"><option value="">— Site —</option><option value="Management" ${v.site==='Management'?'selected':''}>Management</option><option value="Old Cluster" ${v.site==='Old Cluster'?'selected':''}>Old Cluster</option><option value="Site A (DC)" ${v.site==='Site A (DC)'?'selected':''}>Site A (DC)</option><option value="Site B (MM)" ${v.site==='Site B (MM)'?'selected':''}>Site B (MM)</option><option value="Site C (DR)" ${v.site==='Site C (DR)'?'selected':''}>Site C (DR)</option><option value="Backup" ${v.site==='Backup'?'selected':''}>Backup</option><option value="Other" ${v.site==='Other'?'selected':''}>Other</option></select></td>
-      <td><input id="vm-edit-os-${v.id}" type="text" value="${esc(v.os||'')}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"/></td>
+      <td><select id="vm-edit-os-${v.id}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none">${_buildOsDropdownHtml(v.os)}</select></td>
       <td><input id="vm-edit-ip-${v.id}" type="text" value="${esc(v.ip||'')}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"/></td>
       <td><input id="vm-edit-func-${v.id}" type="text" value="${esc(v.func||'')}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"/></td>
       <td style="white-space:nowrap;display:flex;gap:4px">
