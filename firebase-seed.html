@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>One-Time Firebase Seed — VM Inventory</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+body{font-family:'Share Tech Mono',monospace,sans-serif;background:#060a14;color:#e0eaff;padding:30px;max-width:900px;margin:0 auto;line-height:1.7}
+h1{color:#ff6b00;letter-spacing:2px}
+button{font-family:'Share Tech Mono',monospace;font-size:1rem;padding:14px 28px;background:#ff6b00;color:#fff;border:none;border-radius:6px;cursor:pointer;letter-spacing:2px;margin:10px 4px}
+button:disabled{background:#7b8cae;cursor:not-allowed}
+button.danger{background:#ff3355}
+.log{background:#0c1424;border:1px solid #1d2f50;border-radius:6px;padding:14px;margin-top:20px;font-size:.85rem;min-height:60px;white-space:pre-wrap}
+.ok{color:#00e5a0}.err{color:#ff3355}.warn{color:#ffcc00}.info{color:#3399ff}
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:.78rem}
+th,td{border:1px solid #1d2f50;padding:6px 8px;text-align:left}
+th{background:#0a1120;color:#a855f7}
+.warn-box{background:rgba(255,204,0,.1);border:1px solid #ffcc00;border-radius:6px;padding:14px;margin:18px 0;color:#ffcc00}
+</style>
+</head>
+<body>
+<h1>🔥 One-Time Firebase Seed</h1>
+<p>Push 21 VM Inventory baseline rows into Firebase Realtime Database <code>/poc-vm</code>.</p>
+
+<div class="warn-box">
+⚠ <b>WARNING:</b> This will <b>OVERWRITE</b> all current data in Firebase <code>/poc-vm</code>.<br>
+Use this <b>once</b> to bootstrap, or to reset to the baseline.
+</div>
+
+<button id="btnSeed" onclick="doSeed()">🚀 PUSH 21 ROWS TO FIREBASE</button>
+<button class="danger" onclick="doClear()">🗑 CLEAR /poc-vm (DANGER)</button>
+<button onclick="doRead()">👁 READ CURRENT /poc-vm</button>
+
+<div class="log" id="log">Ready.</div>
+
+<h3 style="margin-top:24px;color:#a855f7">Preview (21 rows):</h3>
+<table id="preview"></table>
+
+<script>
+const VM_DATA=[
+  {id:'seed-02',name:'vcenter-old-01',hostname:'vcenter-old-01',site:'Old Cluster',
+   os:'VMware vCenter 8',ip:'172.31.10.1',
+   func:'vCenter Old Cluster — ต้นทางการย้ายระบบ | Login: root / NTT@dm1n2026'},
+  {id:'seed-01',name:'old-hpe-esxi-01',hostname:'old-hpe-esxi-01',site:'Old Cluster',
+   os:'VMware ESXi 8 (HPE DL360 Gen10)',ip:'172.31.10.2',
+   func:'Host ระบบเดิม Old Cluster (MM) | iLO: 172.31.10.50 | Login: root / NTT@dm1n2026'},
+  {id:'seed-dns',name:'dc-01',hostname:'dc-01',site:'Management',
+   os:'Windows Server',ip:'172.31.10.3',
+   func:'DNS / Domain Controller | Domain: egat.local | Login: root / NTT@dm1n2026'},
+  {id:'seed-03',name:'vcenter-new-01 (Active)',hostname:'vcenter-new-01',site:'Management',
+   os:'VMware vCenter 8',ip:'172.31.10.5',
+   func:'vCenter HA Active Node — New Cluster'},
+  {id:'seed-04',name:'vcenter-new-01 (Passive)',hostname:'vcenter-new-01',site:'Management',
+   os:'VMware vCenter 8',ip:'172.31.10.6',
+   func:'vCenter HA Passive Node — New Cluster'},
+  {id:'seed-05',name:'vcenter-new-01 (Witness)',hostname:'vcenter-new-01',site:'Management',
+   os:'VMware vCenter 8',ip:'172.31.10.7',
+   func:'vCenter HA Witness Node'},
+  {id:'seed-06',name:'site-a-esxi-01',hostname:'site-a-esxi-01',site:'Site A (DC)',
+   os:'VMware ESXi 8',ip:'172.31.10.10',
+   func:'VMware Host 1 — Site A DC | HDM: 172.31.10.110'},
+  {id:'seed-07',name:'site-a-esxi-02',hostname:'site-a-esxi-02',site:'Site A (DC)',
+   os:'VMware ESXi 8',ip:'172.31.10.11',
+   func:'VMware Host 2 — Site A DC | HDM: 172.31.10.111'},
+  {id:'seed-08',name:'site-a-esxi-03',hostname:'site-a-esxi-03',site:'Site A (DC)',
+   os:'VMware ESXi 8',ip:'172.31.10.12',
+   func:'VMware Host 3 — Site A DC | HDM: 172.31.10.112'},
+  {id:'seed-09',name:'site-b-esxi-01',hostname:'site-b-esxi-01',site:'Site B (MM)',
+   os:'VMware ESXi 8',ip:'172.31.10.13',
+   func:'VMware Host 4 — Site B MM | IMM: 172.31.10.113'},
+  {id:'seed-10',name:'site-c-esxi-01',hostname:'site-c-esxi-01',site:'Site C (DR)',
+   os:'VMware ESXi 8',ip:'172.31.10.14',
+   func:'VMware Host 5 — Site C DR | HDM: 172.31.10.114 | Login: admin / Password@_'},
+  {id:'seed-11',name:'backup-srv-01',hostname:'backup-srv-01',site:'Backup',
+   os:'Windows Server / Linux',ip:'172.31.10.15',
+   func:'Backup Server / Proxy / Repository'},
+  {id:'seed-12',name:'nas-01',hostname:'nas-01',site:'Backup',
+   os:'NAS OS',ip:'172.31.10.16',
+   func:'Backup Storage — NAS Repository'},
+  {id:'seed-ilo-old',name:'old-hpe-esxi-01-iLO',hostname:'old-hpe-esxi-01-ilo',site:'Old Cluster',
+   os:'HPE iLO',ip:'172.31.10.50',
+   func:'iLO Management — Old Cluster ESXi (HPE DL360 Gen10) | Login: hpeadmin / P@ssw0rd | Subnet: 255.255.255.0 | GW: 172.31.10.254'},
+  {id:'seed-vc-vmot-1',name:'vcenter-new-01 (Active) - vMotion',hostname:'vcenter-new-01-vmot',site:'Management',
+   os:'VMware vCenter 8',ip:'172.31.20.5',
+   func:'vCenter HA Active Node — vMotion Network Interface (VLAN 20)'},
+  {id:'seed-vc-vmot-2',name:'vcenter-new-01 (Passive) - vMotion',hostname:'vcenter-new-01-vmot',site:'Management',
+   os:'VMware vCenter 8',ip:'172.31.20.6',
+   func:'vCenter HA Passive Node — vMotion Network Interface (VLAN 20)'},
+  {id:'seed-vc-vmot-3',name:'vcenter-new-01 (Witness) - vMotion',hostname:'vcenter-new-01-vmot',site:'Management',
+   os:'VMware vCenter 8',ip:'172.31.20.7',
+   func:'vCenter HA Witness Node — vMotion Network Interface (VLAN 20)'},
+  {id:'seed-vm2',name:'VM2',hostname:'vm2',site:'Site A (DC)',
+   os:'Linux Red Hat',ip:'172.31.40.2',
+   func:'Production VM — Red Hat Linux | Subnet: 255.255.255.0 | GW: 172.31.40.254'},
+  {id:'seed-vm3',name:'VM3',hostname:'vm3',site:'Site A (DC)',
+   os:'Linux Debian',ip:'172.31.40.3',
+   func:'Production VM — Debian Linux | Subnet: 255.255.255.0 | GW: 172.31.40.254'},
+  {id:'seed-vm4',name:'VM4',hostname:'vm4',site:'Site A (DC)',
+   os:'Linux CentOS',ip:'172.31.40.4',
+   func:'Production VM — CentOS Linux | Subnet: 255.255.255.0 | GW: 172.31.40.254'},
+  {id:'seed-vm5',name:'VM5',hostname:'vm5',site:'Site A (DC)',
+   os:'Linux Ubuntu',ip:'172.31.40.5',
+   func:'Production VM — Ubuntu Linux | Subnet: 255.255.255.0 | GW: 172.31.40.254'},
+].map(v=>({...v,updatedAt:Date.now()}));
+
+// Render preview
+(function(){
+  const t=document.getElementById('preview');
+  t.innerHTML='<tr><th>#</th><th>NAME</th><th>SITE</th><th>OS</th><th>IP</th></tr>'+
+    VM_DATA.map((v,i)=>`<tr><td>${i+1}</td><td>${v.name}</td><td>${v.site}</td><td>${v.os}</td><td>${v.ip}</td></tr>`).join('');
+})();
+
+let fbVm=null;
+try{
+  firebase.initializeApp({
+    apiKey:"AIzaSyB1tDvD2NLYCyxQqA_WxKNF6LnTWUfVtEM",
+    authDomain:"ntt-poc-22474.firebaseapp.com",
+    projectId:"ntt-poc-22474",
+    storageBucket:"ntt-poc-22474.firebasestorage.app",
+    messagingSenderId:"1082839485570",
+    appId:"1:1082839485570:web:f3fa78b89bef78ee5d389b",
+    databaseURL:"https://ntt-poc-22474-default-rtdb.asia-southeast1.firebasedatabase.app"
+  });
+  fbVm=firebase.database().ref('poc-vm');
+  log('Firebase connected to /poc-vm','ok');
+}catch(e){log('Firebase init failed: '+e.message,'err');}
+
+function log(msg,cls=''){
+  const el=document.getElementById('log');
+  const time=new Date().toLocaleTimeString();
+  el.innerHTML+=`\n<span class="${cls}">[${time}] ${msg}</span>`;
+  el.scrollTop=el.scrollHeight;
+}
+
+async function doSeed(){
+  if(!fbVm)return log('Firebase not ready','err');
+  if(!confirm('Push 21 rows to Firebase? This OVERWRITES current /poc-vm.'))return;
+  const btn=document.getElementById('btnSeed');btn.disabled=true;
+  log('Pushing '+VM_DATA.length+' rows...','info');
+  try{
+    await fbVm.set(JSON.stringify(VM_DATA));
+    log('✓ Seed completed. Firebase now has '+VM_DATA.length+' VM entries.','ok');
+  }catch(e){log('✗ Push failed: '+e.message,'err');}
+  btn.disabled=false;
+}
+
+async function doClear(){
+  if(!fbVm)return log('Firebase not ready','err');
+  if(!confirm('CLEAR all data at /poc-vm? This cannot be undone.'))return;
+  try{await fbVm.remove();log('✓ /poc-vm cleared.','warn');}
+  catch(e){log('✗ Clear failed: '+e.message,'err');}
+}
+
+async function doRead(){
+  if(!fbVm)return log('Firebase not ready','err');
+  try{
+    const snap=await fbVm.once('value');
+    const raw=snap.val();
+    if(!raw){log('Firebase /poc-vm is EMPTY','warn');return;}
+    try{
+      const arr=JSON.parse(raw);
+      log('Firebase /poc-vm has '+(Array.isArray(arr)?arr.length:'?')+' entries.','ok');
+    }catch{log('Raw (not JSON): '+raw.slice(0,200),'info');}
+  }catch(e){log('✗ Read failed: '+e.message,'err');}
+}
+</script>
+</body>
+</html>

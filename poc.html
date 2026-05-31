@@ -2727,86 +2727,10 @@ function _fbSetStatus(s){
   el.textContent=v[0];el.style.color=v[1];
 }
 // ── VM Inventory ────────────────────────────────────────────────────────────
+// Data lives EXCLUSIVELY in Firebase Realtime Database at /poc-vm.
+// No local seeding, no localStorage. Use firebase-seed.html once to bootstrap.
 let vmInventory=[];
-const VM_LS_KEY='poc_vm_inventory_v4';
 function _vmGenId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
-const VM_SEED=[
-  /* ── Old Cluster ────────────────────────────────────────── */
-  {id:'seed-01',name:'old-hpe-esxi-01',hostname:'old-hpe-esxi-01',site:'Old Cluster',
-   os:'VMware ESXi 8 (HPE DL360 Gen10)',ip:'172.31.10.2',
-   func:'Host ระบบเดิม Old Cluster (MM) | iLO: 172.31.10.50 | Login: root / NTT@dm1n2026'},
-  {id:'seed-ilo-old',name:'old-hpe-esxi-01-iLO',hostname:'old-hpe-esxi-01-ilo',site:'Old Cluster',
-   os:'HPE iLO',ip:'172.31.10.50',
-   func:'iLO Management — Old Cluster ESXi (HPE DL360 Gen10) | Login: hpeadmin / P@ssw0rd | Subnet: 255.255.255.0 | GW: 172.31.10.254'},
-  {id:'seed-02',name:'vcenter-old-01',hostname:'vcenter-old-01',site:'Old Cluster',
-   os:'VMware vCenter 8',ip:'172.31.10.1',
-   func:'vCenter Old Cluster — ต้นทางการย้ายระบบ | Login: root / NTT@dm1n2026'},
-  {id:'seed-dns',name:'dc-01',hostname:'dc-01',site:'Management',
-   os:'Windows Server',ip:'172.31.10.3',
-   func:'DNS / Domain Controller | Domain: egat.local | Login: root / NTT@dm1n2026'},
-  /* ── vCenter HA ─────────────────────────────────────────── */
-  {id:'seed-03',name:'vcenter-new-01 (Active)',hostname:'vcenter-new-01',site:'Management',
-   os:'VMware vCenter 8',ip:'172.31.10.5',
-   func:'vCenter HA Active Node — New Cluster'},
-  {id:'seed-04',name:'vcenter-new-01 (Passive)',hostname:'vcenter-new-01',site:'Management',
-   os:'VMware vCenter 8',ip:'172.31.10.6',
-   func:'vCenter HA Passive Node — New Cluster'},
-  {id:'seed-05',name:'vcenter-new-01 (Witness)',hostname:'vcenter-new-01',site:'Management',
-   os:'VMware vCenter 8',ip:'172.31.10.7',
-   func:'vCenter HA Witness Node'},
-  /* ── vCenter HA Network (vMotion VLAN 20) ───────────────── */
-  {id:'seed-vc-vmot-1',name:'vcenter-new-01 (Active) - vMotion',hostname:'vcenter-new-01-vmot',site:'Management',
-   os:'VMware vCenter 8',ip:'172.31.20.5',
-   func:'vCenter HA Active Node — vMotion Network Interface (VLAN 20)'},
-  {id:'seed-vc-vmot-2',name:'vcenter-new-01 (Passive) - vMotion',hostname:'vcenter-new-01-vmot',site:'Management',
-   os:'VMware vCenter 8',ip:'172.31.20.6',
-   func:'vCenter HA Passive Node — vMotion Network Interface (VLAN 20)'},
-  {id:'seed-vc-vmot-3',name:'vcenter-new-01 (Witness) - vMotion',hostname:'vcenter-new-01-vmot',site:'Management',
-   os:'VMware vCenter 8',ip:'172.31.20.7',
-   func:'vCenter HA Witness Node — vMotion Network Interface (VLAN 20)'},
-  /* ── New Cluster Hosts ──────────────────────────────────── */
-  {id:'seed-06',name:'site-a-esxi-01',hostname:'site-a-esxi-01',site:'Site A (DC)',
-   os:'VMware ESXi 8',ip:'172.31.10.10',
-   func:'VMware Host 1 — Site A DC | HDM: 172.31.10.110'},
-  {id:'seed-07',name:'site-a-esxi-02',hostname:'site-a-esxi-02',site:'Site A (DC)',
-   os:'VMware ESXi 8',ip:'172.31.10.11',
-   func:'VMware Host 2 — Site A DC | HDM: 172.31.10.111'},
-  {id:'seed-08',name:'site-a-esxi-03',hostname:'site-a-esxi-03',site:'Site A (DC)',
-   os:'VMware ESXi 8',ip:'172.31.10.12',
-   func:'VMware Host 3 — Site A DC | HDM: 172.31.10.112'},
-  {id:'seed-09',name:'site-b-esxi-01',hostname:'site-b-esxi-01',site:'Site B (MM)',
-   os:'VMware ESXi 8',ip:'172.31.10.13',
-   func:'VMware Host 4 — Site B MM | IMM: 172.31.10.113'},
-  {id:'seed-10',name:'site-c-esxi-01',hostname:'site-c-esxi-01',site:'Site C (DR)',
-   os:'VMware ESXi 8',ip:'172.31.10.14',
-   func:'VMware Host 5 — Site C DR | HDM: 172.31.10.114 | Login: admin / Password@_'},
-  /* ── Backup ─────────────────────────────────────────────── */
-  {id:'seed-11',name:'backup-srv-01',hostname:'backup-srv-01',site:'Backup',
-   os:'Windows Server / Linux',ip:'172.31.10.15',
-   func:'Backup Server / Proxy / Repository'},
-  {id:'seed-12',name:'nas-01',hostname:'nas-01',site:'Backup',
-   os:'NAS OS',ip:'172.31.10.16',
-   func:'Backup Storage — NAS Repository'},
-  /* ── Production VMs (VLAN 40) ───────────────────────────── */
-  {id:'seed-vm2',name:'VM2',hostname:'vm2',site:'Site A (DC)',
-   os:'Linux Red Hat',ip:'172.31.40.2',
-   func:'Production VM — Red Hat Linux | Subnet: 255.255.255.0 | GW: 172.31.40.254'},
-  {id:'seed-vm3',name:'VM3',hostname:'vm3',site:'Site A (DC)',
-   os:'Linux Debian',ip:'172.31.40.3',
-   func:'Production VM — Debian Linux | Subnet: 255.255.255.0 | GW: 172.31.40.254'},
-  {id:'seed-vm4',name:'VM4',hostname:'vm4',site:'Site A (DC)',
-   os:'Linux CentOS',ip:'172.31.40.4',
-   func:'Production VM — CentOS Linux | Subnet: 255.255.255.0 | GW: 172.31.40.254'},
-  {id:'seed-vm5',name:'VM5',hostname:'vm5',site:'Site A (DC)',
-   os:'Linux Ubuntu',ip:'172.31.40.5',
-   func:'Production VM — Ubuntu Linux | Subnet: 255.255.255.0 | GW: 172.31.40.254'},
-].map(v=>({...v,updatedAt:1700000000003}));
-function loadVmLocal(){
-  // Show VM_SEED immediately so table isn't blank while Firebase listener loads.
-  // Firebase listener will overwrite this with real data once it fires.
-  if(!vmInventory.length)vmInventory=[...VM_SEED];
-}
-function saveVmLocal(){try{localStorage.setItem(VM_LS_KEY,JSON.stringify(vmInventory));}catch(e){}}
 let _newOsSelectRef=null;
 function openNewOsModal(selectElement){
   _newOsSelectRef=selectElement;
@@ -3152,22 +3076,16 @@ function _fbStartSync(){
   // VM Inventory sync (separate path, always apply regardless of running state)
   if(_fbVm){
     _fbVm.on('value',snap=>{
+      // Firebase = single source of truth. No local seeding here.
       const raw=snap.val();
       let incoming=[];
       if(raw){try{incoming=JSON.parse(raw)||[];}catch(e){incoming=[];}}
-      // If Firebase is empty or has no entries, seed it with VM_SEED
-      if(!Array.isArray(incoming)||incoming.length===0){
-        vmInventory=[...VM_SEED];
-        _fbPushVm();
-        if(!_vmEditingId)renderVmTable();
-        return;
-      }
+      if(!Array.isArray(incoming))incoming=[];
       if(JSON.stringify(incoming)!==JSON.stringify(vmInventory)){
-        // Don't disturb the row currently being edited — keep the user's in-progress edit object intact
         if(_vmEditingId){
+          // Preserve the row being edited so user's typing isn't lost
           const editingEntry=vmInventory.find(x=>x.id===_vmEditingId);
           vmInventory=incoming.map(it=>it.id===_vmEditingId&&editingEntry?editingEntry:it);
-          // also keep editing entry if it was removed remotely
           if(!vmInventory.some(x=>x.id===_vmEditingId)&&editingEntry)vmInventory.push(editingEntry);
         }else{
           vmInventory=incoming;
@@ -3226,7 +3144,7 @@ function _fbApply(data){
 }
 // ────────────────────────────────────────────────────────────────────────────
 window.onload=()=>{
-  loadDiagramSettings();loadStepStatuses();loadStepNotes();loadVmLocal();loadVmTrash();applyDiagramSettings();
+  loadDiagramSettings();loadStepStatuses();loadStepNotes();loadVmTrash();applyDiagramSettings();
   const session=loadSession();
   if(session&&session.part&&cases[session.part])selectMode(session.part);
   else selectMode('hyper');
