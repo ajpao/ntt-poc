@@ -3037,7 +3037,7 @@ function renderVmTable(){
       <button class="vm-filter-btn${_vmFilterType==='Physical'?' active':''}" style="${_vmFilterType==='Physical'?'border-color:#ff9a4a;color:#ff9a4a;background:rgba(255,107,0,.12)':''}" onclick="_vmFilterType=_vmFilterType==='Physical'?null:'Physical';renderVmTable()">Physical</button>
     </div>
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
-      <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap;min-width:34px">LOCATION:</span>
+      <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap;min-width:34px">VM LOCATION:</span>
       <button class="vm-filter-btn${!_vmFilterLocation?' active':''}" onclick="_vmFilterLocation=null;renderVmTable()">ALL</button>
       ${['old-hpe-esxi-01','site-a-esxi-01','site-a-esxi-02','site-a-esxi-03','site-b-esxi-01','site-c-esxi-01'].map(h=>`<button class="vm-filter-btn${_vmFilterLocation===h?' active':''}" onclick="_vmFilterLocation=_vmFilterLocation==='${h}'?null:'${h}';renderVmTable()">${h}</button>`).join('')}
     </div>
