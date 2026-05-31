@@ -892,7 +892,7 @@ opacity:1
   <div class="vm-body">
     <div class="vm-page-head">
       <div style="font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--dim);letter-spacing:1px">รายการ Node / VM ทั้งหมดใน POC Environment — sync real-time ทุก session</div>
-      <button class="vm-btn add" onclick="toggleVmForm()">＋ Add VM</button>
+      <button class="vm-btn add" onclick="toggleVmForm()">＋ REGISTER NODE</button>
     </div>
     <!-- Add/Edit Form -->
     <div id="vmAddForm" class="vm-add-form hidden">
@@ -2825,15 +2825,24 @@ function renderVmTable(){
   const ipIcon=_vmSortIp==='asc'?'↑':_vmSortIp==='desc'?'↓':'↕';
   const ipCls=_vmSortIp?`sort-${_vmSortIp}`:'';
   wrap.innerHTML=`
-  <div class="vm-toolbar">
-    <input class="vm-search" type="text" placeholder="🔍  ค้นหา name / IP / OS / site..." value="${esc(_vmSearch)}" oninput="_vmSearch=this.value;renderVmTable()"/>
-    <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap">SITE:</span>
-    <button class="vm-filter-btn${_vmFilterSite?'':' active-site'}" onclick="_vmFilterSite=null;renderVmTable()">ALL</button>
-    ${allSites.map(s=>`<button class="vm-filter-btn${_vmFilterSite===s?' active-site':''}" onclick="_vmFilterSite=${_vmFilterSite===s?'null':`'${s}'`};renderVmTable()">${esc(s)}</button>`).join('')}
-    <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap;margin-left:4px">OS:</span>
-    <button class="vm-filter-btn${!_vmFilterOs?' active':''}" onclick="_vmFilterOs=null;renderVmTable()">ALL</button>
-    ${allOs.map(o=>`<button class="vm-filter-btn${_vmFilterOs===o?' active':''}" onclick="_vmFilterOs=${_vmFilterOs===o?'null':`'${o.replace(/'/g,"\\'")}'`};renderVmTable()">${esc(o)}</button>`).join('')}
-    <span class="vm-count">${list.length} / ${vmInventory.length} รายการ</span>
+  <div class="vm-toolbar" style="flex-direction:column;gap:10px;align-items:stretch">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="position:relative;flex:1">
+        <input class="vm-search" type="text" placeholder="🔍  ค้นหา name / IP / OS / site / function..." value="${esc(_vmSearch)}" oninput="_vmSearch=this.value;renderVmTable()" style="width:100%;padding-right:32px"/>
+        ${_vmSearch?`<button onclick="_vmSearch='';renderVmTable()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--dim);cursor:pointer;font-size:.9rem;line-height:1;padding:0" title="ล้างการค้นหา">✕</button>`:''}
+      </div>
+      <span class="vm-count" style="margin-left:0">${list.length} / ${vmInventory.length} รายการ</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
+      <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap;min-width:34px">SITE:</span>
+      <button class="vm-filter-btn${_vmFilterSite?'':' active-site'}" onclick="_vmFilterSite=null;renderVmTable()">ALL</button>
+      ${allSites.map(s=>`<button class="vm-filter-btn${_vmFilterSite===s?' active-site':''}" onclick="_vmFilterSite=${_vmFilterSite===s?'null':`'${s}'`};renderVmTable()">${esc(s)}</button>`).join('')}
+    </div>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
+      <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap;min-width:34px">OS:</span>
+      <button class="vm-filter-btn${!_vmFilterOs?' active':''}" onclick="_vmFilterOs=null;renderVmTable()">ALL</button>
+      ${allOs.map(o=>`<button class="vm-filter-btn${_vmFilterOs===o?' active':''}" onclick="_vmFilterOs=${_vmFilterOs===o?'null':`'${o.replace(/'/g,"\\'")}'`};renderVmTable()">${esc(o)}</button>`).join('')}
+    </div>
   </div>
   ${!list.length?'<div class="vm-empty">ไม่พบรายการที่ตรงกับการค้นหา</div>':`
   <table class="vm-table">
