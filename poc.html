@@ -2802,7 +2802,8 @@ const VM_SEED=[
    func:'Production VM — Ubuntu Linux | Subnet: 255.255.255.0 | GW: 172.31.40.254'},
 ].map(v=>({...v,updatedAt:1700000000003}));
 function loadVmLocal(){
-  if(!vmInventory.length){vmInventory=[...VM_SEED];_fbPushVm();}
+  // Don't seed here — let Firebase be source of truth.
+  // Seeding happens in _fbStartSync only if Firebase is truly empty.
 }
 function saveVmLocal(){try{localStorage.setItem(VM_LS_KEY,JSON.stringify(vmInventory));}catch(e){}}
 let _newOsSelectRef=null;
@@ -3141,7 +3142,16 @@ function _fbStartSync(){
   // VM Inventory sync (separate path, always apply regardless of running state)
   if(_fbVm){
     _fbVm.on('value',snap=>{
-      const raw=snap.val();if(!raw)return;
+      const raw=snap.val();
+      if(!raw){
+        // Firebase truly empty — seed it (first-time setup only)
+        if(!vmInventory.length){
+          vmInventory=[...VM_SEED];
+          _fbPushVm();
+          renderVmTable();
+        }
+        return;
+      }
       try{
         const incoming=JSON.parse(raw);
         if(JSON.stringify(incoming)!==JSON.stringify(vmInventory)){
