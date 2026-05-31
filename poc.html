@@ -2839,7 +2839,6 @@ function renderVmTable(){
         <button class="vm-filter-btn" onclick="_vmSearch=document.getElementById('vmSearchInput').value;renderVmTable()" title="ค้นหา" style="white-space:nowrap">🔍 SEARCH</button>
       </div>
       <span class="vm-count" style="margin-left:0">${list.length} / ${vmInventory.length} รายการ</span>
-      <button class="vm-filter-btn" style="border-color:var(--danger);color:var(--danger);white-space:nowrap" onclick="_vmSearch='';document.getElementById('vmSearchInput').value='';_vmFilterOs=null;_vmFilterSite=null;renderVmTable()" title="ล้างทุกการค้นหาและกรอง">✕ CLEAR</button>
     </div>
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
       <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap;min-width:34px">SITE:</span>
@@ -2847,9 +2846,12 @@ function renderVmTable(){
       ${allSites.map(s=>`<button class="vm-filter-btn${_vmFilterSite===s?' active-site':''}" onclick="_vmFilterSite=${_vmFilterSite===s?'null':`'${s}'`};renderVmTable()">${esc(s)}</button>`).join('')}
     </div>
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
-      <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap;min-width:34px">OS:</span>
+      <span style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);white-space:nowrap;min-width:34px">TAG:</span>
       <button class="vm-filter-btn${!_vmFilterOs?' active':''}" onclick="_vmFilterOs=null;renderVmTable()">ALL</button>
       ${allOs.map(o=>`<button class="vm-filter-btn${_vmFilterOs===o?' active':''}" onclick="_vmFilterOs=${_vmFilterOs===o?'null':`'${o.replace(/'/g,"\\'")}'`};renderVmTable()">${esc(o)}</button>`).join('')}
+    </div>
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">
+      <button class="vm-filter-btn" style="border-color:var(--danger);color:var(--danger);border-width:2px;padding:7px 16px;font-size:.78rem;font-weight:600;letter-spacing:1px" onclick="_vmSearch='';document.getElementById('vmSearchInput').value='';_vmFilterOs=null;_vmFilterSite=null;renderVmTable()" title="ล้างทุกการค้นหาและกรอง">✕ CLEAR FILTER</button>
     </div>
   </div>
   ${!list.length?'<div class="vm-empty">ไม่พบรายการที่ตรงกับการค้นหา</div>':`
