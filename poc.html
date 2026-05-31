@@ -981,35 +981,6 @@ opacity:1
       </div>
     </div>
   </div>
-
-  <!-- Edit VM Modal -->
-  <div class="modal-ov" id="vmEditModal" onclick="vmEditBackdrop(event)">
-    <div class="modal-panel" style="width:min(1240px,97vw)" role="dialog" aria-modal="true">
-      <div class="modal-head">
-        <div class="modal-title">✎ EDIT ENTRY</div>
-        <button class="modal-close" type="button" onclick="closeEditModal()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" id="em-id"/>
-        <div style="overflow-x:auto">
-        <div style="display:flex;gap:10px;align-items:flex-end;min-width:1120px">
-          <div class="vm-field" style="flex:1.4;min-width:150px"><label>VM / NODE NAME</label><input id="em-name" type="text"/></div>
-          <div class="vm-field" style="flex:1.2;min-width:130px"><label>HOSTNAME</label><input id="em-hostname" type="text"/></div>
-          <div class="vm-field" style="flex:1;min-width:120px"><label>SITE</label><select id="em-site"><option value="">— Site —</option><option value="Management">Management</option><option value="Old Cluster">Old Cluster</option><option value="Site A (DC)">Site A (DC)</option><option value="Site B (MM)">Site B (MM)</option><option value="Site C (DR)">Site C (DR)</option><option value="Backup">Backup</option><option value="Other">Other</option></select></div>
-          <div class="vm-field" id="em-location-wrap" style="flex:1.1;min-width:130px"><label>LOCATION (ESXi)</label><select id="em-location"><option value="">— ESXi Host —</option><option value="old-hpe-esxi-01">old-hpe-esxi-01</option><option value="site-a-esxi-01">site-a-esxi-01</option><option value="site-a-esxi-02">site-a-esxi-02</option><option value="site-a-esxi-03">site-a-esxi-03</option><option value="site-b-esxi-01">site-b-esxi-01</option><option value="site-c-esxi-01">site-c-esxi-01</option></select></div>
-          <div class="vm-field" style="flex:.8;min-width:95px"><label>TYPE</label><select id="em-type" onchange="_emTypeChanged()"><option value="">— Type —</option><option value="VM">VM</option><option value="Physical">Physical</option></select></div>
-          <div class="vm-field" style="flex:1.1;min-width:130px"><label>OS</label><select id="em-os"></select></div>
-          <div class="vm-field" style="flex:1;min-width:120px"><label>IP ADDRESS</label><input id="em-ip" type="text"/></div>
-          <div class="vm-field" style="flex:1.6;min-width:170px"><label>FUNCTION / ROLE</label><input id="em-func" type="text"/></div>
-        </div>
-        </div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
-          <button class="vm-btn cancel" onclick="closeEditModal()">CANCEL</button>
-          <button class="vm-btn save" onclick="saveEditModal()">✓ SAVE</button>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -2878,6 +2849,7 @@ function cancelVmForm(){
   ['vf-name','vf-os','vf-ip','vf-hostname','vf-func','vf-edit-id'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
 let _vmSearch='',_vmFilterOs=null,_vmFilterSite=null,_vmFilterSubnet=null,_vmFilterType=null,_vmFilterLocation=null,_vmSearchTimer=null;
+let _vmEditingId=null;
 let vmTrash=[];
 // Trash lives in Firebase /poc-vm-trash — synced across all sessions
 function loadVmTrash(){/* no-op, Firebase listener seeds vmTrash */}
@@ -3000,53 +2972,53 @@ function undoDelete(id){
   vmInventory.push(item);
   saveVmTrash();_fbPushVm();renderVmTable();
 }
-let _emEditId=null;
 function editVm(id){
-  const v=vmInventory.find(x=>x.id===id);if(!v)return;
-  _emEditId=id;
-  document.getElementById('em-id').value=id;
-  document.getElementById('em-name').value=v.name||'';
-  document.getElementById('em-hostname').value=v.hostname||'';
-  document.getElementById('em-site').value=v.site||'';
-  document.getElementById('em-type').value=v.type||'';
-  document.getElementById('em-ip').value=v.ip||'';
-  document.getElementById('em-func').value=v.func||'';
-  // OS dropdown
-  const osSel=document.getElementById('em-os');
-  osSel.innerHTML=_buildOsDropdownHtml(v.os||'');
-  _setupOsDropdownHandler(osSel);
-  // Location dropdown value + visibility based on type
-  document.getElementById('em-location').value=v.location||'';
-  _emTypeChanged();
-  document.getElementById('vmEditModal').classList.add('open');
-  setTimeout(()=>document.getElementById('em-name')?.focus(),80);
+  if(_vmEditingId===id){
+    _vmEditingId=null;
+    renderVmTable();
+    return;
+  }
+  _vmEditingId=id;
+  renderVmTable();
+  setTimeout(()=>{
+    // Setup OS dropdown handler
+    const osSelect=document.getElementById('vm-edit-os-'+id);
+    if(osSelect)_setupOsDropdownHandler(osSelect);
+    // Focus on name input
+    const nameInput=document.getElementById('vm-edit-name-'+id);
+    if(nameInput)nameInput.focus();
+  },100);
 }
-function _emTypeChanged(){
-  const t=document.getElementById('em-type')?.value;
-  const wrap=document.getElementById('em-location-wrap');
-  if(!wrap)return;
-  if(t==='VM'){wrap.style.display='flex';}
-  else{wrap.style.display='none';const sel=document.getElementById('em-location');if(sel)sel.value='';}
-}
-function closeEditModal(){_emEditId=null;document.getElementById('vmEditModal').classList.remove('open');}
-function vmEditBackdrop(e){if(e.target.id==='vmEditModal')closeEditModal();}
-async function saveEditModal(){
-  const id=_emEditId;if(!id)return;
+async function saveEditVm(id){
   const v=vmInventory.find(x=>x.id===id);if(!v)return;
-  const name=(document.getElementById('em-name').value||'').trim();
-  if(!name){alert('VM Name is required');document.getElementById('em-name').focus();return;}
+  // Read DOM values FIRST before clearing edit state (in case re-render strips inputs)
+  const nameEl=document.getElementById('vm-edit-name-'+id);
+  const hostEl=document.getElementById('vm-edit-hostname-'+id);
+  const siteEl=document.getElementById('vm-edit-site-'+id);
+  const typeEl=document.getElementById('vm-edit-type-'+id);
+  const locationEl=document.getElementById('vm-edit-location-'+id);
+  const osEl=document.getElementById('vm-edit-os-'+id);
+  const ipEl=document.getElementById('vm-edit-ip-'+id);
+  const funcEl=document.getElementById('vm-edit-func-'+id);
+  if(!nameEl){console.warn('Edit inputs missing for',id);return;}
+  const name=(nameEl.value||'').trim();
+  if(!name){alert('VM Name is required');nameEl.focus();return;}
   v.name=name;
-  v.hostname=(document.getElementById('em-hostname').value||'').trim();
-  v.site=(document.getElementById('em-site').value||'').trim();
-  v.type=(document.getElementById('em-type').value||'').trim();
-  v.location=v.type==='VM'?(document.getElementById('em-location').value||'').trim():'';
-  v.os=(document.getElementById('em-os').value||'').trim();
-  v.ip=(document.getElementById('em-ip').value||'').trim();
-  v.func=(document.getElementById('em-func').value||'').trim();
+  v.hostname=(hostEl?.value||'').trim();
+  v.site=(siteEl?.value||'').trim();
+  v.type=(typeEl?.value||'').trim();
+  v.location=v.type==='VM'?(locationEl?.value||'').trim():'';
+  v.os=(osEl?.value||'').trim();
+  v.ip=(ipEl?.value||'').trim();
+  v.func=(funcEl?.value||'').trim();
   v.updatedAt=Date.now();
-  closeEditModal();
+  _vmEditingId=null;
   renderVmTable();
   await _fbPushVm();
+}
+function cancelEditVm(){
+  _vmEditingId=null;
+  renderVmTable();
 }
 function renderVmTable(){
   const wrap=document.getElementById('vmTableWrap');if(!wrap)return;
@@ -3153,8 +3125,23 @@ function renderVmTable(){
       <th style="width:68px"></th>
     </tr></thead>
     <tbody>${list.map((v,i)=>{
-      return `<tr>
+      const isEditing=_vmEditingId===v.id;
+      return `<tr ${isEditing?'style="background:rgba(168,85,247,.08)"':''}>
       <td style="color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:.65rem;text-align:center">${i+1}</td>
+      ${isEditing?`
+      <td><input id="vm-edit-name-${v.id}" type="text" value="${esc(v.name||'')}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"/></td>
+      <td><input id="vm-edit-hostname-${v.id}" type="text" value="${esc(v.hostname||'')}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"/></td>
+      <td><select id="vm-edit-site-${v.id}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"><option value="">— Site —</option><option value="Management" ${v.site==='Management'?'selected':''}>Management</option><option value="Old Cluster" ${v.site==='Old Cluster'?'selected':''}>Old Cluster</option><option value="Site A (DC)" ${v.site==='Site A (DC)'?'selected':''}>Site A (DC)</option><option value="Site B (MM)" ${v.site==='Site B (MM)'?'selected':''}>Site B (MM)</option><option value="Site C (DR)" ${v.site==='Site C (DR)'?'selected':''}>Site C (DR)</option><option value="Backup" ${v.site==='Backup'?'selected':''}>Backup</option><option value="Other" ${v.site==='Other'?'selected':''}>Other</option></select></td>
+      <td>${v.type==='VM'?`<select id="vm-edit-location-${v.id}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.72rem;padding:4px 6px;outline:none"><option value="">— ESXi Host —</option><option value="old-hpe-esxi-01" ${v.location==='old-hpe-esxi-01'?'selected':''}>old-hpe-esxi-01</option><option value="site-a-esxi-01" ${v.location==='site-a-esxi-01'?'selected':''}>site-a-esxi-01</option><option value="site-a-esxi-02" ${v.location==='site-a-esxi-02'?'selected':''}>site-a-esxi-02</option><option value="site-a-esxi-03" ${v.location==='site-a-esxi-03'?'selected':''}>site-a-esxi-03</option><option value="site-b-esxi-01" ${v.location==='site-b-esxi-01'?'selected':''}>site-b-esxi-01</option><option value="site-c-esxi-01" ${v.location==='site-c-esxi-01'?'selected':''}>site-c-esxi-01</option></select>`:`<span style="color:var(--dim);font-size:.7rem;padding:4px 6px;display:block">—</span>`}</td>
+      <td><select id="vm-edit-type-${v.id}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"><option value="">— Type —</option><option value="VM" ${v.type==='VM'?'selected':''}>VM</option><option value="Physical" ${v.type==='Physical'?'selected':''}>Physical</option></select></td>
+      <td><select id="vm-edit-os-${v.id}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none">${_buildOsDropdownHtml(v.os)}</select></td>
+      <td><input id="vm-edit-ip-${v.id}" type="text" value="${esc(v.ip||'')}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"/></td>
+      <td><input id="vm-edit-func-${v.id}" type="text" value="${esc(v.func||'')}" style="width:100%;background:#091220;border:1px solid rgba(168,85,247,.5);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:4px 6px;outline:none"/></td>
+      <td style="white-space:nowrap;display:flex;gap:4px">
+        <button class="vm-btn save" onclick="saveEditVm('${v.id}')" style="padding:4px 8px;font-size:.65rem">✓</button>
+        <button class="vm-btn cancel" onclick="cancelEditVm()" style="padding:4px 8px;font-size:.65rem">✕</button>
+      </td>
+      `:`
       <td style="font-family:'Share Tech Mono',monospace;color:var(--ok);font-size:.76rem">${esc(v.name)}</td>
       <td style="font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--dim)">${esc(v.hostname||'—')}</td>
       <td><span class="vm-site-tag ${_siteCls(v.site)}" onclick="_vmFilterSite=_vmFilterSite==='${v.site.replace(/'/g,"\\'")}'?null:'${v.site.replace(/'/g,"\\'")}';renderVmTable()" title="คลิกเพื่อ filter Site นี้" style="cursor:pointer">${esc(v.site||'—')}</span></td>
@@ -3180,6 +3167,7 @@ function renderVmTable(){
         <button class="vm-icon-btn edit" onclick="editVm('${v.id}')" title="Edit">✎</button>
         <button class="vm-icon-btn del" onclick="deleteVm('${v.id}')" title="Delete">✕</button>
       </td>
+      `}
     </tr>`;
     }).join('')}</tbody>
   </table>${vmTrash.length>0?`<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="vm-filter-btn" style="border-color:var(--danger);color:var(--danger);background:rgba(255,51,85,.12);padding:6px 12px;font-size:.75rem" onclick="openTrashModal()" title="Trash (${vmTrash.length} items — expires in 24 hours)">🗑 UNDO (${vmTrash.length})</button></div>`:''}
@@ -3198,8 +3186,15 @@ function _fbStartSync(){
       if(raw){try{incoming=JSON.parse(raw)||[];}catch(e){incoming=[];}}
       if(!Array.isArray(incoming))incoming=[];
       if(JSON.stringify(incoming)!==JSON.stringify(vmInventory)){
-        vmInventory=incoming;
-        renderVmTable();
+        if(_vmEditingId){
+          // Preserve the row being edited so user's typing isn't lost
+          const editingEntry=vmInventory.find(x=>x.id===_vmEditingId);
+          vmInventory=incoming.map(it=>it.id===_vmEditingId&&editingEntry?editingEntry:it);
+          if(!vmInventory.some(x=>x.id===_vmEditingId)&&editingEntry)vmInventory.push(editingEntry);
+        }else{
+          vmInventory=incoming;
+          renderVmTable();
+        }
       }
     },()=>{});
   }
