@@ -6,6 +6,8 @@
 <title>POC Simulator | Hypervisor & Backup Software</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
 :root{
   --bg:#060a14;--panel:#0c1424;--panel2:#101a2e;--border:#1d2f50;
@@ -322,6 +324,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
     <div class="topbar-icon" id="topIcon">&#9881;</div>
     <div class="topbar-title" id="topTitle">POC SIMULATOR</div>
     <div class="topbar-sub" id="topSub">READY</div>
+    <span id="syncBadge" style="font-family:'Share Tech Mono',monospace;font-size:.58rem;padding:3px 10px;border-radius:10px;border:1px solid var(--border);color:var(--dim);white-space:nowrap">⬤ CONNECTING</span>
     <button class="back-link" onclick="backLanding()">BACK</button>
   </div>
   <div class="sim-body">
@@ -851,6 +854,19 @@ const cases={
 };
 let selected=null,currentPart=null,currentCase=null,running=false;
 let currentStepFilter='all',celebTimer=null;
+// ── Firebase Realtime Database ──────────────────────────────────────────────
+const _fbConfig={
+  apiKey:"AIzaSyB1tDvD2NLYCyxQqA_WxKNF6LnTWUfVtEM",
+  authDomain:"ntt-poc-22474.firebaseapp.com",
+  projectId:"ntt-poc-22474",
+  storageBucket:"ntt-poc-22474.firebasestorage.app",
+  messagingSenderId:"1082839485570",
+  appId:"1:1082839485570:web:f3fa78b89bef78ee5d389b",
+  databaseURL:"https://ntt-poc-22474-default-rtdb.asia-southeast1.firebasedatabase.app"
+};
+firebase.initializeApp(_fbConfig);
+const _fbRef=firebase.database().ref('poc');
+// ────────────────────────────────────────────────────────────────────────────
 const STEP_STATUS_KEY='poc_step_status_v1';
 const STEP_STATUSES=[
   {key:'pending',label:'PENDING'},
@@ -862,12 +878,9 @@ let stepStatusStore={};
 const STEP_NOTES_KEY='poc_step_notes_v1';
 let stepNotesStore={};
 const openNoteKeys=new Set();
-function loadStepNotes(){
-  try{stepNotesStore=JSON.parse(localStorage.getItem(STEP_NOTES_KEY)||'{}')||{};}
-  catch(e){stepNotesStore={};}
-}
+function loadStepNotes(){/* handled by Firebase onValue */}
 function saveStepNotes(){
-  try{localStorage.setItem(STEP_NOTES_KEY,JSON.stringify(stepNotesStore));}catch(e){}
+  _fbRef.child('stepNotes').set(JSON.stringify(stepNotesStore)).catch(e=>console.error('FB:notes',e));
 }
 function getNote(index){
   const key=caseKey();
@@ -960,12 +973,9 @@ function toggleNote(index){
   else{openNoteKeys.add(key);noteArea.style.display='block';noteArea.querySelector('textarea')?.focus();}
 }
 function nowTs(){return new Date().toLocaleTimeString('th-TH',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});}
-function loadStepStatuses(){
-  try{stepStatusStore=JSON.parse(localStorage.getItem(STEP_STATUS_KEY)||'{}')||{};}
-  catch(e){stepStatusStore={};}
-}
+function loadStepStatuses(){/* handled by Firebase onValue */}
 function saveStepStatuses(){
-  try{localStorage.setItem(STEP_STATUS_KEY,JSON.stringify(stepStatusStore));}catch(e){}
+  _fbRef.child('stepStatuses').set(JSON.stringify(stepStatusStore)).catch(e=>console.error('FB:status',e));
 }
 function caseKey(){
   return currentPart&&currentCase?`${currentPart}:${currentCase.id}`:'';
@@ -2526,11 +2536,41 @@ function saveSettingsForm(){
   applyDiagramSettings();
   closeSettingsModal();
 }
+function setSyncStatus(s){
+  const el=document.getElementById('syncBadge');if(!el)return;
+  const m={connecting:{t:'⬤ CONNECTING',c:'var(--warn)',b:'rgba(255,204,0,.4)'},
+            synced:{t:'⬤ LIVE',c:'var(--ok)',b:'rgba(0,229,160,.4)'},
+            error:{t:'⬤ OFFLINE',c:'var(--danger)',b:'rgba(255,51,85,.4)'}};
+  const v=m[s]||m.connecting;
+  el.textContent=v.t;el.style.color=v.c;el.style.borderColor=v.b;
+}
+function updateNoteUIFromStore(){
+  if(!currentCase)return;
+  document.querySelectorAll('.note-btn').forEach((btn,i)=>{
+    const note=getNote(i);
+    btn.classList.toggle('has-note',note.trim().length>0);
+    const ta=document.getElementById('note-area-'+i)?.querySelector('textarea');
+    if(ta&&document.activeElement!==ta)ta.value=note;
+  });
+}
+function startFirebaseSync(){
+  setSyncStatus('connecting');
+  _fbRef.on('value',snap=>{
+    const data=snap.val()||{};
+    if(data.stepStatuses){try{stepStatusStore=JSON.parse(data.stepStatuses)||{};}catch(e){}}
+    if(data.stepNotes){try{stepNotesStore=JSON.parse(data.stepNotes)||{};}catch(e){}}
+    renderSteps();
+    updateProgressBar();
+    updateNoteUIFromStore();
+    setSyncStatus('synced');
+  },err=>{console.error('FB',err);setSyncStatus('error');});
+}
 window.onload=()=>{
-  loadDiagramSettings();loadStepStatuses();loadStepNotes();applyDiagramSettings();
+  loadDiagramSettings();applyDiagramSettings();
   const session=loadSession();
   if(session&&session.part&&cases[session.part])selectMode(session.part);
   else selectMode('hyper');
+  startFirebaseSync();
   new QRCode(document.getElementById('qrcode'),{
     text:'https://ajpao.github.io/ntt-poc/poc.html',
     width:80,height:80,
