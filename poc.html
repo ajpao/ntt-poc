@@ -98,6 +98,34 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
 .diagram-wrap svg{width:100%;display:block;min-height:320px}
 .info-float{position:fixed;top:76px;right:20px;width:42px;height:42px;border-radius:50%;border:1px solid rgba(51,153,255,.55);background:rgba(12,20,36,.9);color:#fff;font-family:'Share Tech Mono',monospace;font-size:1.05rem;font-weight:700;cursor:pointer;display:grid;place-items:center;box-shadow:0 0 22px rgba(51,153,255,.24);transition:.2s;z-index:80}
 .info-float:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 0 26px rgba(255,107,0,.24);transform:translateY(-1px)}
+.vm-float{position:fixed;top:128px;right:20px;width:42px;height:42px;border-radius:50%;border:1px solid rgba(168,85,247,.55);background:rgba(12,20,36,.9);color:#a855f7;font-family:'Share Tech Mono',monospace;font-size:.62rem;font-weight:700;cursor:pointer;display:grid;place-items:center;box-shadow:0 0 22px rgba(168,85,247,.18);transition:.2s;z-index:80;line-height:1.1;text-align:center}
+.vm-float:hover{border-color:var(--purple);color:#fff;box-shadow:0 0 26px rgba(168,85,247,.32);transform:translateY(-1px)}
+.vm-table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}
+.vm-table th,.vm-table td{border:1px solid rgba(29,47,80,.86);padding:8px 10px;text-align:left;vertical-align:middle}
+.vm-table th{font-family:'Share Tech Mono',monospace;color:var(--purple);background:rgba(16,26,46,.72);font-size:.68rem;letter-spacing:1px}
+.vm-table td{color:var(--text)}
+.vm-table tr:hover td{background:rgba(168,85,247,.06)}
+.vm-os-tag{font-family:'Share Tech Mono',monospace;font-size:.6rem;padding:2px 7px;border-radius:4px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);color:#c084fc;white-space:nowrap}
+.vm-add-form{display:none;background:rgba(16,26,46,.6);border:1px solid rgba(168,85,247,.35);border-radius:8px;padding:12px;margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.vm-add-form.hidden{display:none!important}
+.vm-field{display:flex;flex-direction:column;gap:4px}
+.vm-field label{font-family:'Share Tech Mono',monospace;font-size:.64rem;color:var(--dim);letter-spacing:1px}
+.vm-field input,.vm-field textarea{background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Noto Sans Thai','Share Tech Mono',sans-serif;font-size:.8rem;padding:6px 9px;outline:none;transition:.2s}
+.vm-field input:focus,.vm-field textarea:focus{border-color:var(--purple);box-shadow:0 0 0 2px rgba(168,85,247,.12)}
+.vm-field.full{grid-column:1/-1}
+.vm-field textarea{resize:vertical;min-height:48px}
+.vm-form-actions{grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+.vm-btn{font-family:'Share Tech Mono',monospace;font-size:.72rem;border-radius:5px;padding:7px 14px;cursor:pointer;transition:.2s;border:1px solid}
+.vm-btn.save{border-color:var(--purple);background:rgba(168,85,247,.15);color:#c084fc}
+.vm-btn.save:hover{background:rgba(168,85,247,.28);color:#fff}
+.vm-btn.cancel{border-color:var(--border);background:transparent;color:var(--dim)}
+.vm-btn.cancel:hover{border-color:var(--danger);color:var(--danger)}
+.vm-btn.add{border-color:rgba(168,85,247,.5);background:rgba(168,85,247,.1);color:#c084fc;margin-left:auto}
+.vm-btn.add:hover{background:rgba(168,85,247,.22);color:#fff}
+.vm-icon-btn{background:transparent;border:none;cursor:pointer;font-size:.85rem;padding:3px 6px;border-radius:4px;transition:.18s}
+.vm-icon-btn.edit{color:var(--info)}.vm-icon-btn.edit:hover{background:rgba(51,153,255,.15)}
+.vm-icon-btn.del{color:var(--danger)}.vm-icon-btn.del:hover{background:rgba(255,51,85,.15)}
+.vm-empty{text-align:center;padding:24px;font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--dim);letter-spacing:1px}
 .panel-title{font-family:'Share Tech Mono',monospace;color:var(--accent);font-size:.82rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border)}
 .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .metric{background:var(--panel2);border:1px solid rgba(29,47,80,.8);border-radius:7px;padding:10px;min-height:76px}
@@ -331,6 +359,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;back
     <div class="overview">
       <div class="diagram-wrap">
         <button class="info-float" type="button" onclick="openInfo()" aria-label="Open POC architecture information">i</button>
+        <button class="vm-float" type="button" onclick="openVmInventory()" aria-label="VM Inventory">VM<br>LIST</button>
         <svg viewBox="0 0 1180 865" role="img" aria-label="POC Architecture Diagram" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <filter id="pocGlow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -662,6 +691,35 @@ opacity:1
         </div>
       </div>
     </div>
+    <!-- VM Inventory Modal -->
+    <div class="modal-ov" id="vmModal" onclick="vmModalBackdrop(event)">
+      <div class="modal-panel" style="width:min(900px,96vw)" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <div class="modal-title" style="color:var(--purple)">⊞ VM INVENTORY</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
+            <button class="vm-btn add" onclick="toggleVmForm()">＋ Add VM</button>
+            <button class="modal-close" type="button" onclick="closeVmInventory()">&times;</button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <!-- Add/Edit Form -->
+          <div id="vmAddForm" class="vm-add-form hidden">
+            <div class="vm-field"><label>VM NAME</label><input id="vf-name" type="text" placeholder="เช่น vm-web-01"/></div>
+            <div class="vm-field"><label>OS</label><input id="vf-os" type="text" placeholder="เช่น Ubuntu 22.04 / Windows Server 2022"/></div>
+            <div class="vm-field"><label>IP ADDRESS</label><input id="vf-ip" type="text" placeholder="เช่น 172.31.40.10"/></div>
+            <div class="vm-field"><label>HOSTNAME</label><input id="vf-hostname" type="text" placeholder="เช่น web-srv-01"/></div>
+            <div class="vm-field full"><label>FUNCTION / ROLE</label><textarea id="vf-func" placeholder="เช่น Web Server สำหรับทดสอบ HTTP load balancing ใน POC"></textarea></div>
+            <input type="hidden" id="vf-edit-id"/>
+            <div class="vm-form-actions">
+              <button class="vm-btn cancel" onclick="cancelVmForm()">CANCEL</button>
+              <button class="vm-btn save" onclick="saveVmEntry()">&#10003; SAVE</button>
+            </div>
+          </div>
+          <!-- Table -->
+          <div id="vmTableWrap"></div>
+        </div>
+      </div>
+    </div>
     <div class="btn-bar" id="caseButtons"></div>
     <div class="progress-bar-wrap">
       <div class="progress-bar-label"><span class="pb-title">&#9632; OVERALL PROGRESS</span><span class="pb-stat" id="progressText">—</span></div>
@@ -856,7 +914,7 @@ let selected=null,currentPart=null,currentCase=null,running=false;
 let currentStepFilter='all',celebTimer=null;
 const STEP_STATUS_KEY='poc_step_status_v1';
 // ── Firebase Realtime Database ──────────────────────────────────────────────
-let _fb=null;
+let _fb=null,_fbVm=null;
 try{
   firebase.initializeApp({
     apiKey:"AIzaSyB1tDvD2NLYCyxQqA_WxKNF6LnTWUfVtEM",
@@ -868,6 +926,7 @@ try{
     databaseURL:"https://ntt-poc-22474-default-rtdb.asia-southeast1.firebasedatabase.app"
   });
   _fb=firebase.database().ref('poc');
+  _fbVm=firebase.database().ref('poc-vm');
 }catch(e){console.warn('Firebase init failed, using localStorage only',e);}
 let _fbReady=false;
 let _fbPendingSync=false;
@@ -2556,12 +2615,16 @@ function saveSettingsForm(){
 }
 // ── Firebase push & listen ──────────────────────────────────────────────────
 let _fbLastPush='';
-function _fbPush(){
+function _fbPush(includeVm=false){
   if(!_fb)return;
   const payload=JSON.stringify({s:stepStatusStore,n:stepNotesStore});
-  if(payload===_fbLastPush)return;
+  if(payload===_fbLastPush&&!includeVm)return;
   _fbLastPush=payload;
   _fb.set(payload).catch(e=>console.warn('FB push err',e));
+}
+function _fbPushVm(){
+  if(!_fbVm)return;
+  _fbVm.set(JSON.stringify(vmInventory)).catch(e=>console.warn('FB vm err',e));
 }
 function _fbSetStatus(s){
   const el=document.getElementById('syncBadge');if(!el)return;
@@ -2569,9 +2632,97 @@ function _fbSetStatus(s){
   const v=m[s]||m.connecting;
   el.textContent=v[0];el.style.color=v[1];
 }
+// ── VM Inventory ────────────────────────────────────────────────────────────
+let vmInventory=[];
+const VM_LS_KEY='poc_vm_inventory_v1';
+function _vmGenId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function loadVmLocal(){try{vmInventory=JSON.parse(localStorage.getItem(VM_LS_KEY)||'[]')||[];}catch(e){vmInventory=[];}}
+function saveVmLocal(){try{localStorage.setItem(VM_LS_KEY,JSON.stringify(vmInventory));}catch(e){}}
+function openVmInventory(){renderVmTable();document.getElementById('vmModal').classList.add('open');}
+function closeVmInventory(){document.getElementById('vmModal').classList.remove('open');cancelVmForm();}
+function vmModalBackdrop(e){if(e.target.id==='vmModal')closeVmInventory();}
+function toggleVmForm(){
+  const f=document.getElementById('vmAddForm');
+  const hidden=f.classList.contains('hidden');
+  if(hidden){f.classList.remove('hidden');document.getElementById('vf-name').focus();}
+  else cancelVmForm();
+}
+function cancelVmForm(){
+  const f=document.getElementById('vmAddForm');
+  f.classList.add('hidden');
+  ['vf-name','vf-os','vf-ip','vf-hostname','vf-func','vf-edit-id'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+}
+function saveVmEntry(){
+  const name=(document.getElementById('vf-name').value||'').trim();
+  if(!name){document.getElementById('vf-name').focus();return;}
+  const entry={
+    id:document.getElementById('vf-edit-id').value||_vmGenId(),
+    name,
+    os:(document.getElementById('vf-os').value||'').trim(),
+    ip:(document.getElementById('vf-ip').value||'').trim(),
+    hostname:(document.getElementById('vf-hostname').value||'').trim(),
+    func:(document.getElementById('vf-func').value||'').trim(),
+    updatedAt:Date.now()
+  };
+  const idx=vmInventory.findIndex(v=>v.id===entry.id);
+  if(idx>=0)vmInventory[idx]=entry;else vmInventory.push(entry);
+  saveVmLocal();_fbPushVm();cancelVmForm();renderVmTable();
+}
+function deleteVm(id){
+  if(!confirm('ลบ VM นี้?'))return;
+  vmInventory=vmInventory.filter(v=>v.id!==id);
+  saveVmLocal();_fbPushVm();renderVmTable();
+}
+function editVm(id){
+  const v=vmInventory.find(x=>x.id===id);if(!v)return;
+  document.getElementById('vf-edit-id').value=v.id;
+  document.getElementById('vf-name').value=v.name||'';
+  document.getElementById('vf-os').value=v.os||'';
+  document.getElementById('vf-ip').value=v.ip||'';
+  document.getElementById('vf-hostname').value=v.hostname||'';
+  document.getElementById('vf-func').value=v.func||'';
+  document.getElementById('vmAddForm').classList.remove('hidden');
+  document.getElementById('vf-name').focus();
+}
+function renderVmTable(){
+  const wrap=document.getElementById('vmTableWrap');if(!wrap)return;
+  if(!vmInventory.length){
+    wrap.innerHTML='<div class="vm-empty">ยังไม่มี VM — กด "+ Add VM" เพื่อเพิ่ม</div>';return;
+  }
+  wrap.innerHTML=`<table class="vm-table">
+    <thead><tr><th>#</th><th>VM NAME</th><th>HOSTNAME</th><th>OS</th><th>IP ADDRESS</th><th>FUNCTION / ROLE</th><th></th></tr></thead>
+    <tbody>${vmInventory.map((v,i)=>`<tr>
+      <td style="color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:.68rem">${i+1}</td>
+      <td style="font-family:'Share Tech Mono',monospace;color:var(--ok)">${esc(v.name)}</td>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:.76rem">${esc(v.hostname||'—')}</td>
+      <td><span class="vm-os-tag">${esc(v.os||'—')}</span></td>
+      <td style="font-family:'Share Tech Mono',monospace;color:var(--info)">${esc(v.ip||'—')}</td>
+      <td style="font-size:.8rem;color:var(--dim)">${esc(v.func||'—')}</td>
+      <td style="white-space:nowrap">
+        <button class="vm-icon-btn edit" onclick="editVm('${v.id}')" title="Edit">✎</button>
+        <button class="vm-icon-btn del" onclick="deleteVm('${v.id}')" title="Delete">✕</button>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+// ────────────────────────────────────────────────────────────────────────────
 function _fbStartSync(){
   if(!_fb){_fbSetStatus('offline');return;}
   _fbSetStatus('connecting');
+  // VM Inventory sync (separate path, always apply regardless of running state)
+  if(_fbVm){
+    _fbVm.on('value',snap=>{
+      const raw=snap.val();if(!raw)return;
+      try{
+        const incoming=JSON.parse(raw);
+        if(JSON.stringify(incoming)!==JSON.stringify(vmInventory)){
+          vmInventory=incoming;
+          saveVmLocal();
+          renderVmTable();
+        }
+      }catch(e){}
+    },()=>{});
+  }
   _fb.on('value',snap=>{
     _fbReady=true;
     _fbSetStatus('live');
@@ -2622,7 +2773,7 @@ function _fbApply(data){
 }
 // ────────────────────────────────────────────────────────────────────────────
 window.onload=()=>{
-  loadDiagramSettings();loadStepStatuses();loadStepNotes();applyDiagramSettings();
+  loadDiagramSettings();loadStepStatuses();loadStepNotes();loadVmLocal();applyDiagramSettings();
   const session=loadSession();
   if(session&&session.part&&cases[session.part])selectMode(session.part);
   else selectMode('hyper');
