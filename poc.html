@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -2807,6 +2807,13 @@ function closeVmInventory(){
   else document.getElementById('pg-landing').style.display='flex';
 }
 function vmModalBackdrop(){}
+const _vmSortCols=['_vmSortName','_vmSortHostname','_vmSortSite','_vmSortLocation','_vmSortType','_vmSortOs','_vmSortIp','_vmSortFunc'];
+function _vmToggleSort(col){
+  const cur=window[col];
+  _vmSortCols.forEach(c=>{window[c]=null;}); // reset all
+  window[col]=cur==='asc'?'desc':cur==='desc'?null:'asc';
+  renderVmTable();
+}
 function _vfTypeChanged(){
   const t=document.getElementById('vf-type')?.value;
   const wrap=document.getElementById('vf-location-wrap');
@@ -2835,7 +2842,7 @@ function cancelVmForm(){
   if(f)f.classList.add('hidden');
   ['vf-name','vf-os','vf-ip','vf-hostname','vf-func','vf-edit-id'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
-let _vmSearch='',_vmFilterOs=null,_vmFilterSite=null,_vmFilterSubnet=null,_vmFilterType=null,_vmFilterLocation=null,_vmSortIp=null,_vmSortName=null,_vmSearchTimer=null;
+let _vmSearch='',_vmFilterOs=null,_vmFilterSite=null,_vmFilterSubnet=null,_vmFilterType=null,_vmFilterLocation=null,_vmSortIp=null,_vmSortName=null,_vmSortHostname=null,_vmSortSite=null,_vmSortLocation=null,_vmSortType=null,_vmSortOs=null,_vmSortFunc=null,_vmSearchTimer=null;
 let _vmEditingId=null;
 let vmTrash=[];
 // Trash lives in Firebase /poc-vm-trash — synced across all sessions
@@ -2990,10 +2997,15 @@ function renderVmTable(){
   if(_vmFilterSubnet)list=list.filter(v=>_getVlanId(v.ip)===_vmFilterSubnet);
   if(_vmFilterType)list=list.filter(v=>(v.type||'')===_vmFilterType);
   if(_vmFilterLocation)list=list.filter(v=>(v.location||'')===_vmFilterLocation);
-  // sort by Name
-  if(_vmSortName==='asc')list.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  else if(_vmSortName==='desc')list.sort((a,b)=>(b.name||'').localeCompare(a.name||''));
-  // sort by IP
+  // helper: cycle asc→desc→null
+  const _s=(f,key)=>f==='asc'?list.sort((a,b)=>(a[key]||'').localeCompare(b[key]||'')):f==='desc'?list.sort((a,b)=>(b[key]||'').localeCompare(a[key]||'')):null;
+  if(_vmSortName)_s(_vmSortName,'name');
+  if(_vmSortHostname)_s(_vmSortHostname,'hostname');
+  if(_vmSortSite)_s(_vmSortSite,'site');
+  if(_vmSortLocation)_s(_vmSortLocation,'location');
+  if(_vmSortType)_s(_vmSortType,'type');
+  if(_vmSortOs)_s(_vmSortOs,'os');
+  if(_vmSortFunc)_s(_vmSortFunc,'func');
   if(_vmSortIp==='asc')list.sort((a,b)=>_ipToNum(a.ip)-_ipToNum(b.ip));
   else if(_vmSortIp==='desc')list.sort((a,b)=>_ipToNum(b.ip)-_ipToNum(a.ip));
   // unique OS & Site for filter buttons
@@ -3001,10 +3013,10 @@ function renderVmTable(){
   const allSites=[...new Set(vmInventory.map(v=>v.site).filter(Boolean))];
   const siteOrder=['Management','Old Cluster','Site A (DC)','Site B (MM)','Site C (DR)','Backup','Other'];
   allSites.sort((a,b)=>(siteOrder.indexOf(a)+1||99)-(siteOrder.indexOf(b)+1||99));
-  const nameIcon=_vmSortName==='asc'?'↑':_vmSortName==='desc'?'↓':'↕';
-  const nameCls=_vmSortName?`sort-${_vmSortName}`:'';
-  const ipIcon=_vmSortIp==='asc'?'↑':_vmSortIp==='desc'?'↓':'↕';
-  const ipCls=_vmSortIp?`sort-${_vmSortIp}`:'';
+  const _si=s=>s==='asc'?'↑':s==='desc'?'↓':'↕';
+  const _sc=s=>s?`sort-${s}`:'';
+  const nameIcon=_si(_vmSortName),nameCls=_sc(_vmSortName);
+  const ipIcon=_si(_vmSortIp),ipCls=_sc(_vmSortIp);
   wrap.innerHTML=`
   <div class="vm-toolbar" style="flex-direction:column;gap:10px;align-items:stretch">
     <div style="display:flex;align-items:center;gap:8px">
@@ -3067,14 +3079,14 @@ function renderVmTable(){
   <table class="vm-table">
     <thead><tr>
       <th style="width:36px">#</th>
-      <th class="sortable ${nameCls}" onclick="_vmSortName=_vmSortName==='asc'?'desc':_vmSortName==='desc'?null:'asc';renderVmTable()">VM / NODE NAME <span class="sort-icon">${nameIcon}</span></th>
-      <th>HOSTNAME</th>
-      <th>SITE</th>
-      <th>LOCATION (ESXi)</th>
-      <th>TYPE</th>
-      <th>OS</th>
-      <th class="sortable ${ipCls}" onclick="_vmSortIp=_vmSortIp==='asc'?'desc':_vmSortIp==='desc'?null:'asc';renderVmTable()">IP ADDRESS <span class="sort-icon">${ipIcon}</span></th>
-      <th>FUNCTION / ROLE</th>
+      <th class="sortable ${_sc(_vmSortName)}" onclick="_vmToggleSort('_vmSortName')">VM / NODE NAME <span class="sort-icon">${_si(_vmSortName)}</span></th>
+      <th class="sortable ${_sc(_vmSortHostname)}" onclick="_vmToggleSort('_vmSortHostname')">HOSTNAME <span class="sort-icon">${_si(_vmSortHostname)}</span></th>
+      <th class="sortable ${_sc(_vmSortSite)}" onclick="_vmToggleSort('_vmSortSite')">SITE <span class="sort-icon">${_si(_vmSortSite)}</span></th>
+      <th class="sortable ${_sc(_vmSortLocation)}" onclick="_vmToggleSort('_vmSortLocation')">LOCATION (ESXi) <span class="sort-icon">${_si(_vmSortLocation)}</span></th>
+      <th class="sortable ${_sc(_vmSortType)}" onclick="_vmToggleSort('_vmSortType')">TYPE <span class="sort-icon">${_si(_vmSortType)}</span></th>
+      <th class="sortable ${_sc(_vmSortOs)}" onclick="_vmToggleSort('_vmSortOs')">OS <span class="sort-icon">${_si(_vmSortOs)}</span></th>
+      <th class="sortable ${_sc(_vmSortIp)}" onclick="_vmToggleSort('_vmSortIp')">IP ADDRESS <span class="sort-icon">${_si(_vmSortIp)}</span></th>
+      <th class="sortable ${_sc(_vmSortFunc)}" onclick="_vmToggleSort('_vmSortFunc')">FUNCTION / ROLE <span class="sort-icon">${_si(_vmSortFunc)}</span></th>
       <th style="width:68px"></th>
     </tr></thead>
     <tbody>${list.map((v,i)=>{
