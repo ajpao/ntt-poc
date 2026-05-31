@@ -2762,7 +2762,7 @@ function confirmNewOs(){
 }
 
 function _buildOsDropdownHtml(currentValue=''){
-  const defaultOs=['Ubuntu 24.04','CentOS 8','CentOS Stream 10','Debian 12','Red Hat Enterprise Linux 9','SUSE Linux Enterprise Server 15','Windows Server 2012','Windows Server 2016','Windows Server 2022','Windows Server 2025'];
+  const defaultOs=['Ubuntu 24.04','CentOS 8','CentOS Stream 10','Debian 12','Red Hat Enterprise Linux 9','SUSE Linux Enterprise Server 15','Windows Server 2012','Windows Server 2016','Windows Server 2019','Windows Server 2022','Windows Server 2025'];
   const customOs=[...new Set(vmInventory.map(v=>v.os).filter(o=>o&&!defaultOs.includes(o)))].sort();
   const allOs=[...defaultOs,...customOs];
   let html=`<option value="">— Select or add new —</option>`;
