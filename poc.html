@@ -2602,6 +2602,7 @@ function _fbApply(data){
   if(changed&&currentCase){
     renderSteps();
     updateCaseStatusFromSteps();
+    renderAnimation();
     updateProgressBar();
     document.querySelectorAll('.note-btn').forEach((btn,i)=>{
       const note=getNote(i);
