@@ -2789,14 +2789,32 @@ function saveVmLocal(){try{localStorage.setItem(VM_LS_KEY,JSON.stringify(vmInven
 function _updateOsDropdown(){
   const osSelect=document.getElementById('vf-os');if(!osSelect)return;
   const allOs=[...new Set(vmInventory.map(v=>v.os).filter(Boolean))].sort();
-  const baseHtml=`<option value="">— Select or add new —</option>${allOs.map(o=>`<option value="${o.replace(/"/g,'&quot;')}">${esc(o)}</option>`).join('')}<option value="__new__">+ Add New OS...</option>`;
-  osSelect.innerHTML=baseHtml;
+  const currentVal=osSelect.value;
+  let html=`<option value="">— Select or add new —</option>`;
+  html+=allOs.map(o=>`<option value="${o}">${esc(o)}</option>`).join('');
+  html+=`<option value="__new__">+ Add New OS...</option>`;
+  osSelect.innerHTML=html;
+
+  // Restore previous value if it exists
+  if(currentVal&&currentVal!=='__new__'){
+    osSelect.value=currentVal;
+  }
+
+  // Setup change handler
   osSelect.onchange=function(){
     if(this.value==='__new__'){
       const newOs=prompt('Enter new OS name:','');
       if(newOs&&newOs.trim()){
-        this.value=newOs.trim();
-        document.getElementById('vf-os').value=newOs.trim();
+        const osValue=newOs.trim();
+        this.value=osValue;
+        // Add option if not exists
+        if(![...this.options].map(o=>o.value).includes(osValue)){
+          const newOption=document.createElement('option');
+          newOption.value=osValue;
+          newOption.textContent=osValue;
+          this.insertBefore(newOption,this.options[this.options.length-1]);
+        }
+        this.value=osValue;
       }else{
         this.value='';
       }
@@ -2927,15 +2945,25 @@ function undoDelete(id){
 }
 function editVm(id){
   const v=vmInventory.find(x=>x.id===id);if(!v)return;
+  // Ensure dropdown is populated first
+  _updateOsDropdown();
+  // Populate form with VM data
   document.getElementById('vf-edit-id').value=v.id;
   document.getElementById('vf-name').value=v.name||'';
-  document.getElementById('vf-os').value=v.os||'';
   document.getElementById('vf-ip').value=v.ip||'';
   document.getElementById('vf-hostname').value=v.hostname||'';
   document.getElementById('vf-site').value=v.site||'';
   document.getElementById('vf-func').value=v.func||'';
-  document.getElementById('vmAddForm').classList.remove('hidden');
-  document.getElementById('vf-name').focus();
+  // Set OS value after dropdown is populated
+  setTimeout(()=>{
+    const osSelect=document.getElementById('vf-os');
+    if(osSelect)osSelect.value=v.os||'';
+  },50);
+  // Show form (try both IDs for compatibility)
+  let f=document.getElementById('vmFormContainer');
+  if(!f)f=document.getElementById('vmAddForm');
+  if(f)f.classList.remove('hidden');
+  setTimeout(()=>document.getElementById('vf-name')?.focus(),100);
 }
 function renderVmTable(){
   const wrap=document.getElementById('vmTableWrap');if(!wrap)return;
