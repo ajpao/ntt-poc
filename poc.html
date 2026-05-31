@@ -2828,9 +2828,10 @@ function renderVmTable(){
   wrap.innerHTML=`
   <div class="vm-toolbar" style="flex-direction:column;gap:10px;align-items:stretch">
     <div style="display:flex;align-items:center;gap:8px">
-      <div style="position:relative;flex:1">
-        <input class="vm-search" type="text" placeholder="🔍  ค้นหา name / IP / OS / site / function..." value="${esc(_vmSearch)}" oninput="clearTimeout(_vmSearchTimer);const val=this.value;_vmSearch=val;_vmSearchTimer=setTimeout(()=>renderVmTable(),200)" style="width:100%;padding-right:32px"/>
-        ${_vmSearch?`<button onclick="_vmSearch='';renderVmTable()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--dim);cursor:pointer;font-size:.9rem;line-height:1;padding:0" title="ล้างการค้นหา">✕</button>`:''}
+      <div style="position:relative;flex:1;display:flex;gap:6px">
+        <input class="vm-search" id="vmSearchInput" type="text" placeholder="🔍  ค้นหา name / IP / OS / site / function..." value="${esc(_vmSearch)}" onkeypress="if(event.key==='Enter'){_vmSearch=this.value;renderVmTable()}" style="width:100%;padding-right:32px"/>
+        ${_vmSearch?`<button onclick="_vmSearch='';document.getElementById('vmSearchInput').value='';renderVmTable()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:.9rem;line-height:1;padding:0;min-width:24px" title="ล้างการค้นหา">✕</button>`:''}
+        <button class="vm-filter-btn" onclick="_vmSearch=document.getElementById('vmSearchInput').value;renderVmTable()" title="ค้นหา" style="white-space:nowrap">🔍 SEARCH</button>
       </div>
       <span class="vm-count" style="margin-left:0">${list.length} / ${vmInventory.length} รายการ</span>
     </div>
