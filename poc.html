@@ -2802,8 +2802,9 @@ const VM_SEED=[
    func:'Production VM — Ubuntu Linux | Subnet: 255.255.255.0 | GW: 172.31.40.254'},
 ].map(v=>({...v,updatedAt:1700000000003}));
 function loadVmLocal(){
-  // Don't seed here — let Firebase be source of truth.
-  // Seeding happens in _fbStartSync only if Firebase is truly empty.
+  // Show VM_SEED immediately so table isn't blank while Firebase listener loads.
+  // Firebase listener will overwrite this with real data once it fires.
+  if(!vmInventory.length)vmInventory=[...VM_SEED];
 }
 function saveVmLocal(){try{localStorage.setItem(VM_LS_KEY,JSON.stringify(vmInventory));}catch(e){}}
 let _newOsSelectRef=null;
