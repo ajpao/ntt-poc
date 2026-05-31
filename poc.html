@@ -2636,7 +2636,24 @@ function _fbSetStatus(s){
 let vmInventory=[];
 const VM_LS_KEY='poc_vm_inventory_v1';
 function _vmGenId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
-function loadVmLocal(){try{vmInventory=JSON.parse(localStorage.getItem(VM_LS_KEY)||'[]')||[];}catch(e){vmInventory=[];}}
+const VM_SEED=[
+  {id:'seed-01',name:'old-hpe-esxi-01',hostname:'old-hpe-esxi-01',os:'VMware ESXi 8',ip:'172.31.10.2',func:'Host ระบบเดิม (Old Cluster) — สำหรับทดสอบ Migration'},
+  {id:'seed-02',name:'vcenter-old-01',hostname:'vcenter-old-01',os:'VMware vCenter 8',ip:'172.31.10.1',func:'vCenter ของ Old Cluster — ใช้เป็นต้นทางในการย้ายระบบ'},
+  {id:'seed-03',name:'vcenter-new-01 (Active)',hostname:'vcenter-new-01',os:'VMware vCenter 8',ip:'172.31.10.5',func:'vCenter HA — Active Node (New Cluster)'},
+  {id:'seed-04',name:'vcenter-new-01 (Passive)',hostname:'vcenter-new-01',os:'VMware vCenter 8',ip:'172.31.10.6',func:'vCenter HA — Passive Node (New Cluster)'},
+  {id:'seed-05',name:'vcenter-new-01 (Witness)',hostname:'vcenter-new-01',os:'VMware vCenter 8',ip:'172.31.10.7',func:'vCenter HA — Witness Node'},
+  {id:'seed-06',name:'site-a-esxi-01',hostname:'site-a-esxi-01',os:'VMware ESXi 8',ip:'172.31.10.10',func:'VMware Host 1 — Site A (DC)'},
+  {id:'seed-07',name:'site-a-esxi-02',hostname:'site-a-esxi-02',os:'VMware ESXi 8',ip:'172.31.10.11',func:'VMware Host 2 — Site A (DC)'},
+  {id:'seed-08',name:'site-a-esxi-03',hostname:'site-a-esxi-03',os:'VMware ESXi 8',ip:'172.31.10.12',func:'VMware Host 3 — Site A (DC)'},
+  {id:'seed-09',name:'site-b-esxi-01',hostname:'site-b-esxi-01',os:'VMware ESXi 8',ip:'172.31.10.13',func:'VMware Host 4 — Site B (MM)'},
+  {id:'seed-10',name:'site-c-esxi-01',hostname:'site-c-esxi-01',os:'VMware ESXi 8',ip:'172.31.10.14',func:'VMware Host 5 — Site C (DR)'},
+  {id:'seed-11',name:'backup-srv-01',hostname:'backup-srv-01',os:'Windows Server / Linux',ip:'172.31.10.15',func:'Backup Server / Proxy / Repository'},
+  {id:'seed-12',name:'nas-01',hostname:'nas-01',os:'NAS OS',ip:'172.31.10.16',func:'Backup Storage — NAS / Repository'}
+].map(v=>({...v,updatedAt:1700000000000}));
+function loadVmLocal(){
+  try{vmInventory=JSON.parse(localStorage.getItem(VM_LS_KEY)||'[]')||[];}catch(e){vmInventory=[];}
+  if(!vmInventory.length){vmInventory=[...VM_SEED];saveVmLocal();_fbPushVm();}
+}
 function saveVmLocal(){try{localStorage.setItem(VM_LS_KEY,JSON.stringify(vmInventory));}catch(e){}}
 function openVmInventory(){renderVmTable();document.getElementById('vmModal').classList.add('open');}
 function closeVmInventory(){document.getElementById('vmModal').classList.remove('open');cancelVmForm();}
