@@ -1,5 +1,12 @@
 {
   "projects": {
     "default": "ntt-poc-22474"
+  },
+  "targets": {
+    "ntt-poc-22474": {
+      "hosting": {
+        "poc": ["ntt-poc"]
+      }
+    }
   }
 }
