@@ -1,0 +1,14 @@
+# ─── Firebase ───
+.firebase/
+firebase-debug.log
+*.log
+
+# ─── เครื่องมือ/เอดิเตอร์ ───
+.claude/
+.vscode/
+.idea/
+node_modules/
+
+# ─── OS ───
+.DS_Store
+Thumbs.db

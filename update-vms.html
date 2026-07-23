@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="favicon.png?v=1" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1" />
+<title>Update VM Inventory from RVTools</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+body{font-family:'Share Tech Mono',monospace,sans-serif;background:#060a14;color:#e0eaff;padding:30px;max-width:1100px;margin:0 auto;line-height:1.7}
+h1{color:#ff6b00}h2{color:#a855f7;margin-top:24px}
+button{font-family:'Share Tech Mono',monospace;font-size:.9rem;padding:12px 22px;background:#ff6b00;color:#fff;border:none;border-radius:6px;cursor:pointer;margin:6px 4px}
+button:disabled{background:#7b8cae;cursor:not-allowed}
+button.green{background:#00a06e}
+.log{background:#0c1424;border:1px solid #1d2f50;border-radius:6px;padding:14px;margin-top:16px;font-size:.78rem;min-height:60px;white-space:pre-wrap;max-height:420px;overflow-y:auto}
+.ok{color:#00e5a0}.err{color:#ff3355}.warn{color:#ffcc00}.info{color:#3399ff}
+table{width:100%;border-collapse:collapse;font-size:.72rem;margin-top:10px}
+th,td{border:1px solid #1d2f50;padding:5px 8px;text-align:left;vertical-align:top}
+th{background:#0a1120;color:#a855f7}
+.new{color:#00e5a0}.upd{color:#ffcc00}
+</style>
+</head>
+<body>
+<h1>🔄 VM Inventory Update (from RVTools 2026-06-02)</h1>
+<p>อัปเดต VM entries จากข้อมูล RVTools — เก็บ Physical entries (ESXi/OOB) ไว้ครบ, ข้าม vCLS, รวม VM9 (off)</p>
+
+<button class="green" id="btnRun" onclick="doUpdate()">🚀 RUN UPDATE</button>
+<button onclick="doRead()">👁 READ CURRENT</button>
+<div class="log" id="log">Ready.</div>
+
+<h2>สิ่งที่จะอัปเดต:</h2>
+<table>
+  <tr><th>Action</th><th>Name</th><th>OS</th><th>IP</th><th>Location (ESXi)</th><th>Site</th></tr>
+  <tr><td class="upd">UPDATE</td><td>vcenter-new-01 (Active)</td><td>VMware vCenter 8</td><td>172.31.10.5</td><td>site-a-esxi-01</td><td>Management</td></tr>
+  <tr><td class="upd">UPDATE</td><td>vcenter-new-01 (Passive)</td><td>VMware vCenter 8</td><td>172.31.10.6</td><td>site-a-esxi-03</td><td>Management</td></tr>
+  <tr><td class="upd">UPDATE</td><td>vcenter-new-01 (Witness)</td><td>VMware vCenter 8</td><td>172.31.10.7</td><td>site-b-esxi-01</td><td>Management</td></tr>
+  <tr><td class="upd">UPDATE</td><td>backup-srv-01</td><td>Windows Server 2016</td><td>172.31.10.15</td><td>site-c-esxi-01</td><td>Backup</td></tr>
+  <tr><td class="upd">UPDATE</td><td>TrueNAS (was nas-01)</td><td>Debian 12</td><td>172.31.10.16</td><td>site-c-esxi-01</td><td>Backup</td></tr>
+  <tr><td class="upd">UPDATE</td><td>VM2 (Linux RedHat)</td><td>Red Hat Enterprise Linux 9</td><td>172.31.40.2</td><td>site-a-esxi-01</td><td>Site A (DC)</td></tr>
+  <tr><td class="upd">UPDATE</td><td>VM3 (Linux Debian)</td><td>Debian 12</td><td>172.31.40.3</td><td>site-a-esxi-01</td><td>Site A (DC)</td></tr>
+  <tr><td class="upd">UPDATE</td><td>VM4 (Linux CentOS)</td><td>CentOS 8</td><td>192.168.122.1</td><td>site-a-esxi-01</td><td>Site A (DC)</td></tr>
+  <tr><td class="upd">UPDATE</td><td>VM5 (Linux Ubuntu)</td><td>Ubuntu 24.04</td><td>172.31.40.5</td><td>site-a-esxi-01</td><td>Site A (DC)</td></tr>
+  <tr><td class="new">NEW</td><td>VM1 (WIN2K16)</td><td>Windows Server 2016</td><td>172.31.40.1</td><td>site-a-esxi-01</td><td>Site A (DC)</td></tr>
+  <tr><td class="new">NEW</td><td>VM6 (Linux Ubuntu)</td><td>Ubuntu 24.04</td><td>—</td><td>site-a-esxi-01</td><td>Site A (DC)</td></tr>
+  <tr><td class="new">NEW</td><td>VM6 (Windows2025) SQL</td><td>Windows Server 2025</td><td>172.31.40.6</td><td>site-a-esxi-01</td><td>Site A (DC)</td></tr>
+  <tr><td class="new">NEW</td><td>VM7 (Linux Ubuntu)</td><td>Ubuntu 24.04</td><td>—</td><td>site-a-esxi-01</td><td>Site A (DC)</td></tr>
+  <tr><td class="new">NEW</td><td>VM8 (Linux Ubuntu)</td><td>Ubuntu 24.04</td><td>—</td><td>site-a-esxi-01</td><td>Site A (DC)</td></tr>
+  <tr><td class="new">NEW</td><td>VM9 (Windows 2012R2) ⚡OFF</td><td>Windows Server 2012</td><td>—</td><td>site-a-esxi-01</td><td>Site A (DC)</td></tr>
+  <tr><td class="new">NEW</td><td>VM10 (Windows 2022)</td><td>Windows Server 2022</td><td>—</td><td>site-a-esxi-01</td><td>Site A (DC)</td></tr>
+  <tr><td class="new">NEW</td><td>VM11 (WIN16)</td><td>Windows Server 2016</td><td>172.31.40.11</td><td>site-a-esxi-01</td><td>Site A (DC)</td></tr>
+  <tr><td class="new">NEW</td><td>VM12 (WIN16)</td><td>Windows Server 2016</td><td>172.31.40.12</td><td>site-a-esxi-01</td><td>Site A (DC)</td></tr>
+  <tr><td class="new">NEW</td><td>VM13 (WIN16)</td><td>Windows Server 2016</td><td>172.31.40.13</td><td>site-a-esxi-01</td><td>Site A (DC)</td></tr>
+</table>
+
+<script>
+// UPDATE existing entries: matchId = existing Firebase id
+const VM_UPDATES=[
+  {matchId:'seed-03',  name:'vcenter-new-01 (Active)',  hostname:'vcenter-new-01-Active',  site:'Management',  type:'VM',location:'site-a-esxi-01',os:'VMware vCenter 8',        ip:'172.31.10.5', func:'vCenter HA Active Node — New Cluster'},
+  {matchId:'seed-04',  name:'vcenter-new-01 (Passive)', hostname:'vcenter-new-01-Passive', site:'Management',  type:'VM',location:'site-a-esxi-03',os:'VMware vCenter 8',        ip:'172.31.10.6', func:'vCenter HA Passive Node — New Cluster'},
+  {matchId:'seed-05',  name:'vcenter-new-01 (Witness)', hostname:'vcenter-new-01-Witness', site:'Management',  type:'VM',location:'site-b-esxi-01',os:'VMware vCenter 8',        ip:'172.31.10.7', func:'vCenter HA Witness Node'},
+  {matchId:'seed-11',  name:'backup-srv-01',            hostname:'backup-srv-01',          site:'Backup',      type:'VM',location:'site-c-esxi-01',os:'Windows Server 2016',    ip:'172.31.10.15',func:'Backup Server / Proxy / Repository'},
+  {matchId:'seed-12',  name:'TrueNAS',                  hostname:'truenas',                site:'Backup',      type:'VM',location:'site-c-esxi-01',os:'Debian 12',              ip:'172.31.10.16',func:'Backup Storage — NAS Repository (TrueNAS)'},
+  {matchId:'seed-vm2', name:'VM2 (Linux RedHat)',        hostname:'localhost.localdomain',  site:'Site A (DC)', type:'VM',location:'site-a-esxi-01',os:'Red Hat Enterprise Linux 9',ip:'172.31.40.2',func:'Production VM — Red Hat Enterprise Linux 9'},
+  {matchId:'seed-vm3', name:'VM3 (Linux Debian)',        hostname:'debian',                 site:'Site A (DC)', type:'VM',location:'site-a-esxi-01',os:'Debian 12',              ip:'172.31.40.3', func:'Production VM — Debian Linux 12'},
+  {matchId:'seed-vm4', name:'VM4 (Linux CentOS)',        hostname:'VM4',                    site:'Site A (DC)', type:'VM',location:'site-a-esxi-01',os:'CentOS 8',               ip:'192.168.122.1',func:'Production VM — CentOS 8'},
+  {matchId:'seed-vm5', name:'VM5 (Linux Ubuntu)',        hostname:'vm5-VMware20-1',         site:'Site A (DC)', type:'VM',location:'site-a-esxi-01',os:'Ubuntu 24.04',           ip:'172.31.40.5', func:'Production VM — Ubuntu Linux'},
+];
+
+// NEW entries from RVTools not in existing inventory
+const VM_NEW=[
+  {id:'rv-vm1', name:'VM1 (WIN2K16)',        hostname:'VM1',          site:'Site A (DC)',type:'VM',location:'site-a-esxi-01',os:'Windows Server 2016',ip:'172.31.40.1', func:'Production VM — Windows Server 2016'},
+  {id:'rv-vm6u',name:'VM6 (Linux Ubuntu)',   hostname:'vm6-VMware20-1',site:'Site A (DC)',type:'VM',location:'site-a-esxi-01',os:'Ubuntu 24.04',       ip:'',            func:'Production VM — Ubuntu Linux'},
+  {id:'rv-vm6w',name:'VM6 (Windows2025) SQL',hostname:'VM6',          site:'Site A (DC)',type:'VM',location:'site-a-esxi-01',os:'Windows Server 2025',ip:'172.31.40.6', func:'Production VM — Windows Server 2025 (SQL Server)'},
+  {id:'rv-vm7', name:'VM7 (Linux Ubuntu)',   hostname:'vm7-VMware20-1',site:'Site A (DC)',type:'VM',location:'site-a-esxi-01',os:'Ubuntu 24.04',       ip:'',            func:'Production VM — Ubuntu Linux'},
+  {id:'rv-vm8', name:'VM8 (Linux Ubuntu)',   hostname:'vm8-VMware20-1',site:'Site A (DC)',type:'VM',location:'site-a-esxi-01',os:'Ubuntu 24.04',       ip:'',            func:'Production VM — Ubuntu Linux'},
+  {id:'rv-vm9', name:'VM9 (Windows 2012R2)', hostname:'VM9',          site:'Site A (DC)',type:'VM',location:'site-a-esxi-01',os:'Windows Server 2012',ip:'',            func:'Production VM — Windows Server 2012 R2 (Powered Off)'},
+  {id:'rv-vm10',name:'VM10 (Windows 2022)',  hostname:'VM10',         site:'Site A (DC)',type:'VM',location:'site-a-esxi-01',os:'Windows Server 2022',ip:'',            func:'Production VM — Windows Server 2022'},
+  {id:'rv-vm11',name:'VM11 (WIN16)',         hostname:'VM11',         site:'Site A (DC)',type:'VM',location:'site-a-esxi-01',os:'Windows Server 2016',ip:'172.31.40.11',func:'Production VM — Windows Server 2016'},
+  {id:'rv-vm12',name:'VM12 (WIN16)',         hostname:'VM12',         site:'Site A (DC)',type:'VM',location:'site-a-esxi-01',os:'Windows Server 2016',ip:'172.31.40.12',func:'Production VM — Windows Server 2016'},
+  {id:'rv-vm13',name:'VM13 (WIN16)',         hostname:'VM13',         site:'Site A (DC)',type:'VM',location:'site-a-esxi-01',os:'Windows Server 2016',ip:'172.31.40.13',func:'Production VM — Windows Server 2016'},
+];
+
+let fbVm=null;
+try{
+  firebase.initializeApp({
+    apiKey:"AIzaSyB1tDvD2NLYCyxQqA_WxKNF6LnTWUfVtEM",
+    authDomain:"ntt-poc-22474.firebaseapp.com",
+    projectId:"ntt-poc-22474",
+    storageBucket:"ntt-poc-22474.firebasestorage.app",
+    messagingSenderId:"1082839485570",
+    appId:"1:1082839485570:web:f3fa78b89bef78ee5d389b",
+    databaseURL:"https://ntt-poc-22474-default-rtdb.asia-southeast1.firebasedatabase.app"
+  });
+  fbVm=firebase.database().ref('poc-vm');
+  log('Firebase connected','ok');
+}catch(e){log('Firebase init failed: '+e.message,'err');}
+
+function log(msg,cls=''){
+  const el=document.getElementById('log');
+  const t=new Date().toLocaleTimeString();
+  el.innerHTML+=`\n<span class="${cls}">[${t}] ${msg}</span>`;
+  el.scrollTop=el.scrollHeight;
+}
+
+async function doUpdate(){
+  if(!fbVm)return log('Firebase not ready','err');
+  const btn=document.getElementById('btnRun');btn.disabled=true;
+  log('Reading current Firebase /poc-vm...','info');
+  try{
+    const snap=await fbVm.once('value');
+    const raw=snap.val();
+    let inv=[];
+    if(raw){try{inv=JSON.parse(raw)||[];}catch(e){inv=[];}}
+    log(`Current entries: ${inv.length}`,'info');
+
+    const now=Date.now();
+    let updCnt=0,addCnt=0,skipCnt=0;
+
+    // Step 1: UPDATE existing entries
+    for(const upd of VM_UPDATES){
+      const idx=inv.findIndex(v=>v.id===upd.matchId);
+      if(idx>=0){
+        const prev=inv[idx];
+        inv[idx]={...prev,...upd,id:prev.id,updatedAt:now};
+        delete inv[idx].matchId;
+        updCnt++;
+        log(`  ✎ UPDATED: ${upd.name}  (${upd.os}, ${upd.ip||'—'}, @${upd.location})`,'warn');
+      }else{
+        log(`  ⚠ matchId ${upd.matchId} not found — skipped`,'err');
+        skipCnt++;
+      }
+    }
+
+    // Step 2: ADD new entries (skip if id already exists)
+    for(const n of VM_NEW){
+      if(inv.find(v=>v.id===n.id)){
+        log(`  ~ SKIP (exists): ${n.name}`,'warn');
+        skipCnt++;
+      }else{
+        inv.push({...n,updatedAt:now});
+        addCnt++;
+        log(`  + ADDED: ${n.name}  (${n.os}, ${n.ip||'—'}, @${n.location})`,'ok');
+      }
+    }
+
+    log(`\nSummary: ${updCnt} updated, ${addCnt} added, ${skipCnt} skipped. Total: ${inv.length}`,'info');
+    log('Pushing to Firebase...','info');
+    await fbVm.set(JSON.stringify(inv));
+    log('✓ Firebase updated successfully!','ok');
+  }catch(e){log('✗ Error: '+e.message,'err');}
+  btn.disabled=false;
+}
+
+async function doRead(){
+  if(!fbVm)return log('Firebase not ready','err');
+  try{
+    const snap=await fbVm.once('value');
+    const raw=snap.val();
+    if(!raw){log('Firebase /poc-vm is EMPTY','warn');return;}
+    const arr=JSON.parse(raw);
+    log(`Firebase has ${arr.length} entries:`,'ok');
+    arr.forEach((v,i)=>log(`  ${String(i+1).padStart(2,' ')}. [${(v.type||'?').padEnd(8,' ')}] ${v.name} — ${v.ip||'—'}`,''));
+  }catch(e){log('✗ Read failed: '+e.message,'err');}
+}
+</script>
+</body>
+</html>
